@@ -1,1 +1,1 @@
-pub mod enums;
+pub mod app_enums;

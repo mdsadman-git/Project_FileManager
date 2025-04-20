@@ -4,3 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+time                      = { version = "0.3.41", features = ["formatting"] }
+time-macros               = { version = "0.2.22" }

@@ -1,1 +1,1 @@
-pub mod logger;
+pub mod app_logger;
