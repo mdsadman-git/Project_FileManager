@@ -1,7 +1,7 @@
 use crate::enums::app_enums::HttpRequestMethod;
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HttpRequest {
   pub method: HttpRequestMethod,
   pub path: String,
