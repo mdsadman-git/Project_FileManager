@@ -1,9 +1,9 @@
-use crate::enums::app_enums::HttpRequestMethod;
+use crate::enums::app_enums::HttpMethod;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct HttpRequest {
-  pub method: HttpRequestMethod,
+  pub method: HttpMethod,
   pub path: String,
   pub http_version: String,
   pub host: String,
@@ -28,7 +28,7 @@ impl HttpRequest {
   pub fn construct(request: Vec<String>) -> Self {
     let mut parser = HttpRequestParser::new(request);
     HttpRequest {
-      method: HttpRequestMethod::from(parser.parse_line(0, 0).1),
+      method: HttpMethod::from(parser.parse_line(0, 0).1),
       path: parser.parse_line(0, 1).1,
       http_version: parser.parse_line(0, 2).1,
       host: parser.parse_colon( 1).1,

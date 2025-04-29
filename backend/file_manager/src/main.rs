@@ -6,6 +6,7 @@ mod parser;
 mod config;
 mod library;
 mod global;
+mod router;
 
 // MAIN
 fn main() {

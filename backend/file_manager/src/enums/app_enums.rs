@@ -1,33 +1,33 @@
-#[derive(Debug, Clone)]
-pub enum HttpRequestMethod {
-  GET, POST, UPDATE, DELETE, NONE,
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum HttpMethod {
+  DELETE, GET, NONE, POST, UPDATE,
 }
 
-impl HttpRequestMethod {
-  pub fn from(method: String) -> HttpRequestMethod {
+impl HttpMethod {
+  pub fn from(method: String) -> HttpMethod {
     match method.as_str() {
-      "GET"     => HttpRequestMethod::GET,
-      "POST"    => HttpRequestMethod::POST,
-      "UPDATE"  => HttpRequestMethod::UPDATE,
-      "DELETE"  => HttpRequestMethod::DELETE,
-      _         => HttpRequestMethod::NONE,
+      "GET"     => HttpMethod::GET,
+      "POST"    => HttpMethod::POST,
+      "UPDATE"  => HttpMethod::UPDATE,
+      "DELETE"  => HttpMethod::DELETE,
+      _         => HttpMethod::NONE,
     }
   }
 }
 
-impl HttpRequestMethod {
-  fn as_string(&self) -> String {
+impl HttpMethod {
+  pub fn as_string(&self) -> String {
     match self {
-      HttpRequestMethod::GET      => String::from("GET"),
-      HttpRequestMethod::POST     => String::from("POST"),
-      HttpRequestMethod::UPDATE   => String::from("UPDATE"),
-      HttpRequestMethod::DELETE   => String::from("DELETE"),
-      HttpRequestMethod::NONE     => String::from("NONE"),
+      HttpMethod::GET      => String::from("GET"),
+      HttpMethod::POST     => String::from("POST"),
+      HttpMethod::UPDATE   => String::from("UPDATE"),
+      HttpMethod::DELETE   => String::from("DELETE"),
+      HttpMethod::NONE     => String::from("NONE"),
     }
   }
 }
 
-impl std::fmt::Display for HttpRequestMethod {
+impl std::fmt::Display for HttpMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       f.write_fmt(format_args!("HttpRequest-Method {{ {} }}", self.as_string()))
     }
