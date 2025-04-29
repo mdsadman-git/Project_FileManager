@@ -1,6 +1,6 @@
 use std::{io::{BufRead, BufReader, Write}, net::{TcpListener, TcpStream}};
 
-use crate::{config::{constants::{ASYNC_ROUTING_TABLE, TOTAL_ACTIVE_THREADS}, utility::construct_url}, router::router_handler::RouterHandler};
+use crate::{config::{constants::{ASYNC_ROUTING_TABLE, TOTAL_ACTIVE_THREADS}, utility::construct_app_url}, router::router_handler::RouterHandler};
 use crate::logger::app_logger::Logger;
 
 use crate::library::tp::ThreadPool;
@@ -17,9 +17,9 @@ pub struct TcpHandler {
 impl TcpHandler {
   pub fn new() -> Self {
     TcpHandler {
-      url: construct_url(),
+      url: construct_app_url(),
       pool: ThreadPool::new(TOTAL_ACTIVE_THREADS),
-      listener: match TcpListener::bind(construct_url()) {
+      listener: match TcpListener::bind(construct_app_url()) {
         Ok(tcpl) => tcpl,
         Err(e) => {
             Logger::error("Failed to bind tcp listener", None);
@@ -50,6 +50,7 @@ impl TcpHandler {
             continue;
           } 
 
+          Logger::debug(format!("Thread handling Http Request, Path: {}", &http_request.path));
           self.execute(&http_request, &tcp_stream, &http_request.path);
         },
       }

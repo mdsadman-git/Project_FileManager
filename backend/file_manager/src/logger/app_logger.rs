@@ -2,7 +2,7 @@ use std::{error::Error, time::SystemTime};
 
 use time::{format_description, OffsetDateTime};
 
-use crate::config::utility::construct_logger_dtf;
+use crate::config::utility::logger_dt_format;
 
 pub struct Logger;
 
@@ -32,7 +32,7 @@ impl Logger {
 
 impl Logger {
   fn current_formatted_dt() -> String {
-    let dtf = construct_logger_dtf();
+    let dtf = logger_dt_format();
     let format = format_description::parse(dtf.as_str()).unwrap();
     let current_dt: OffsetDateTime = SystemTime::now().into();
     format!("{}", current_dt.format(&format).unwrap())
