@@ -1,5 +1,5 @@
 {
   "rust-analyzer.linkedProjects": [
     "backend/file_manager/Cargo.toml"
-  ]
+  ],
 }

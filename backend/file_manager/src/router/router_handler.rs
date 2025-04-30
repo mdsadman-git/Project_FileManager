@@ -4,14 +4,7 @@ use crate::enums::app_enums::HttpMethod;
 use crate::logger::app_logger::Logger;
 use crate::router::extra_routes::Extra;
 use crate::router::get_routes::Get;
-
-macro_rules! hashmap {
-    ($($key:expr => $val:expr),*) => {{
-      let mut map = HashMap::new();
-      $( map.insert($key, $val); )*
-      map
-    }};
-}
+use crate::hashmap;
 
 pub struct RouterHandler {
   pub map: HashMap<HttpMethod, HashMap<&'static str, fn() -> String>>,
