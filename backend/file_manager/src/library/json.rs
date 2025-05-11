@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use crate::logger::app_logger::Logger;
+use logger_main::Logger;
 
 pub struct Json;
 

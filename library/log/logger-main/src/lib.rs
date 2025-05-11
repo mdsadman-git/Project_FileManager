@@ -6,6 +6,8 @@ use crate::config::utility::logger_dt_format;
 
 pub struct Logger;
 
+mod config;
+
 // TODO: ADD FEATURE CONFIG FILE LOADER
 
 #[allow(dead_code)]

@@ -1,4 +1,6 @@
-use crate::{library::json::{Json, JsonBuilder, JsonNull}, parser::http_response::HttpResponse};
+use json_builder::{Json, JsonBuilder, JsonNull};
+
+use crate::parser::http_response::HttpResponse;
 
 pub struct Get;
 
@@ -10,7 +12,6 @@ impl Get {
     json_object.insert("number", 123);
     json_object.insert("is_alright", true);
     json_object.insert("is_null", JsonNull::new());
-
 
     let contents = Json::build(json_object);
     let http_response = HttpResponse::new("200", "Ok", contents);

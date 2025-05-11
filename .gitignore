@@ -1,3 +1,20 @@
-# BACKEND
+# BACKEND - FILE MANAGER
 /backend/file_manager/target
 /backend/file_manager/Cargo.lock
+
+# LIBRARY - JSON MAIN
+/library/json/json-main/target
+/library/json/json-main/Cargo.lock
+
+# LIBRARY - JSON MACRO
+/library/json/json-macro/target
+/library/json/json-macro/Cargo.lock
+
+# TOOLS - JSON FORMATTER
+/tools/json_formatter/pkg
+/tools/json_formatter/target
+/tools/json_formatter/Cargo.lock
+/tools/json_formatter/static/dist
+/tools/json_formatter/static/node_modules
+/tools/json_formatter/static/package-lock.json
+

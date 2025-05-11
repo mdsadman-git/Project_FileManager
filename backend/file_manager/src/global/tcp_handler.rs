@@ -1,7 +1,7 @@
 use std::{io::{BufRead, BufReader, Write}, net::{TcpListener, TcpStream}};
 
 use crate::{config::{constants::{ASYNC_ROUTING_TABLE, TOTAL_ACTIVE_THREADS}, utility::construct_app_url}, router::router_handler::RouterHandler};
-use crate::logger::app_logger::Logger;
+use logger_main::Logger;
 
 use crate::library::tp::ThreadPool;
 use crate::parser::http_request::HttpRequest;

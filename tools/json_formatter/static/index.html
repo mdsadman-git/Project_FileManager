@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Json Formatter</title>
+  <script src="index.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <h1 class="title">Json Formatter</h1>
+    </div>
+    <div class="middle">
+      <div class="middle_start">
+        <div class="main">
+          <textarea autocomplete="off" id="TxtAreaInput"></textarea>
+        </div>
+        <div class="side">
+          <div class="top_buttons">
+            <button id="BtnPasteToInput">
+              <span>
+                <svg fill="#ffffff" height="64px" width="64px" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path class="cls-1" d="M9,5V3H3V9H5v1H2V2h8V5ZM6,6v8h8V6Z"></path> </g></svg>
+              </span>
+            </button>
+            <button id="BtnTabLength">
+              <span id="BtnTabLengthTextFlip" class="text_flip">
+                <p>2</p>
+              </span>
+            </button>
+          </div>
+
+          <div class="bottom_buttons">
+            <button id="BtnClear">
+              <span>
+                <svg fill="#ffffff" height="64px" width="64px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 490.00 490.00" xml:space="preserve" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <polygon points="386.813,0 245,141.812 103.188,0 0,103.188 141.813,245 0,386.812 103.187,489.999 245,348.187 386.813,490 490,386.812 348.187,244.999 490,103.187 "></polygon> </g></svg>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="middle_center">
+        <button id="BtnFormat">
+          <span class="action_button">
+            Format
+          </span>
+        </button> 
+      </div>
+      <div class="middle_end">
+        <div>
+          <div readonly contenteditable="true" id="DivResult"></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom">
+      <div class="bottom_start">
+        <p>Json Formatter</p>
+      </div>
+      <div class="bottom_end">
+        <p>Application &copy; Md Sadman</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 use std::sync::{mpsc, Arc, Mutex};
 
-use crate::logger::app_logger::Logger;
+use logger_main::Logger;
 
 use super::worker::Worker;
 use super::job::Job;

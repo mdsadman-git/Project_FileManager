@@ -1,5 +1,12 @@
 {
   "rust-analyzer.linkedProjects": [
-    "backend/file_manager/Cargo.toml"
+    "backend/file_manager/Cargo.toml",
+    "library/log/logger-main/Cargo.toml",
+    "library/json/json-main/Cargo.toml",
+    "library/json/json-macro/Cargo.toml",
+    "tools/json_formatter/Cargo.toml",
+  ],
+  "cSpell.words": [
+    "onclick"
   ],
 }

@@ -1,0 +1,27 @@
+[package]
+name = "json_formatter"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = { version = "0.2.100" }
+js-sys = "0.3.77"
+web-sys = { version = "0.3.77", features = [
+  'Document', 
+  'Element', 
+  'Window', 
+  'CssStyleDeclaration', 
+  'HtmlElement',
+  'HtmlButtonElement',
+  'HtmlTextAreaElement',
+  'DomTokenList',
+  'Navigator',
+  'Clipboard',
+  'MouseEvent',
+  'EventTarget',
+  'Node',
+  'Window'
+]}

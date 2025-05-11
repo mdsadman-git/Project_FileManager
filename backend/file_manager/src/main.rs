@@ -1,6 +1,5 @@
 use global::tcp_handler::TcpHandler;
 
-mod logger;
 mod enums;
 mod parser;
 mod config;

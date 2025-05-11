@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-time                      = { version = "0.3.41", features = ["formatting"] }
-time-macros               = { version = "0.2.22" }
+json-parser               = { path = "../../library/json/json-main" }
+json-builder              = { path = "../../library/json/json-macro" }
+
+logger-main               = { path = "../../library/log/logger-main"}

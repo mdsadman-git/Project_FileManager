@@ -1,0 +1,11 @@
+# CARGO RUN WASM PROJECT
+cargo watch -i "pkg/*" -s "rm -rf pkg && wasm-pack build -d pkg"
+
+# INSTALL PACKAGES
+npm install 
+
+# BUILD
+npm run build 
+
+# RUN 
+npm run serve

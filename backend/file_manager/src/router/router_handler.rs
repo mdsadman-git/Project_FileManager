@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use crate::enums::app_enums::HttpMethod;
-use crate::logger::app_logger::Logger;
 use crate::router::extra_routes::Extra;
 use crate::router::get_routes::Get;
 use crate::hashmap;
+
+use logger_main::Logger;
 
 pub struct RouterHandler {
   pub map: HashMap<HttpMethod, HashMap<&'static str, fn() -> String>>,
