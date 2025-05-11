@@ -15,6 +15,7 @@
 /tools/json_formatter/target
 /tools/json_formatter/Cargo.lock
 /tools/json_formatter/static/dist
+/tools/json_formatter/static/pkg
 /tools/json_formatter/static/node_modules
 /tools/json_formatter/static/package-lock.json
 
