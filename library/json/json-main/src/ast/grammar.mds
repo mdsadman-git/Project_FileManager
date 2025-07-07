@@ -1,0 +1,46 @@
+Expression
+  : ObjectExpression
+  : ArrayExpression
+  ;
+
+ObjectExpression
+  : '{' (ObjectLiteral) * '}'
+  ;
+
+ObjectLiteral: 
+  : ObjectKey ':' ObjectValue ','?
+  ;
+
+ObjectKey 
+  : StringLiteral 
+  ;
+
+ObjectValue
+  : ObjectExpression
+  : ArrayExpression
+  : StringLiteral 
+  : Numeric
+  : Boolean
+  : Null
+  ;
+
+StringLiteral
+  : '"' [.*]* '"'
+  ;
+
+Numeric
+  : [0-9\.]+
+  ;
+
+Boolean
+  : true
+  : false
+  ;
+
+Null
+  : null
+  ;
+
+ArrayExpression
+  : '[' (ObjectExpression | ArrayExpression | StringLiteral | Boolean | Numeric | Null) ','? * ']'
+  ;

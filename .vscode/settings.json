@@ -7,6 +7,8 @@
     "tools/json_formatter/Cargo.toml",
   ],
   "cSpell.words": [
+    "lstack",
+    "nstack",
     "onclick"
   ],
 }

@@ -1,0 +1,13 @@
+OBJECT_START                                        :        '{';
+OBJECT_END                                          :        '}';
+ARRAY_START                                         :        '[';
+ARRAY_END                                           :        ']';
+                                                                
+ITEM_SEPARATOR                                      :        ',';
+KEY_VALUE_SEPARATOR                                 :        ':';
+                                                                
+QUOTE                                               :        '"';
+
+STRING                                              :        '*';
+NUMBER                                              :        '0-9+';
+BOOLEAN                                             :        'true|false';

@@ -1,8 +1,10 @@
-use std::{collections::HashMap, fmt::Display, ops::Deref, rc::Rc, sync::Arc};
+use std::{collections::HashMap, fmt::Display};
 
 use logger_main::Logger;
 
 pub struct Json;
+
+mod ast;
 
 #[allow(dead_code)]
 pub trait JsonBuilder {
@@ -36,12 +38,22 @@ impl Display for JsonValue {
 }
 
 impl JsonValue {
-  fn to_i32(&self) -> i32 {
-    if self.dt != JsonType::Number {
-      panic!("")
-    }
+  pub fn to_i32(&self) -> i32 {
+    self.panic_when_invalid_type(JsonType::Number);
+    self.value.parse().expect(format!("Unable to parse value! Value: '{:?}'", self.value).as_str())
+  }
 
-    1
+  pub fn to_i64(&self) -> i64 {
+    self.panic_when_invalid_type(JsonType::Number);
+    self.value.parse().expect(format!("Unable to parse value! Value: '{:?}'", self.value).as_str())
+  }
+}
+
+impl JsonValue { // Panics
+  fn panic_when_invalid_type(&self, json_type: JsonType) {
+    if self.dt != json_type {
+      panic!("Invalid json datatype! JsonType: {}", self.dt)
+    }
   }
 }
 
@@ -360,217 +372,3 @@ impl Into<JsonValue> for u8 {
     JsonValue { dt: JsonType::Number, value: format!("{}", self) }
   }
 }
-
-// WORKING...
-#[allow(dead_code)]
-pub trait JsonParser {
-  fn perser() -> impl JsonParser;
-  fn parse(&self, json: String);
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum TokenType {
-  ObjectStart, 
-  ObjectEnd, 
-  ArrayStart, 
-  ArrayEnd, 
-  ContentSeparator, 
-  ElementSeparator, 
-  JsonKey, 
-  JsonValue,
-}
-
-impl Display for TokenType {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.write_fmt(format_args!("{:<20}", format!("{:?}", self)))
-  }
-}
-
-#[derive(Debug)]
-pub struct Token {
-  pub tt: TokenType,
-  pub value: String,
-  pub quoted: Option<bool>,
-}
-
-impl Display for Token {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.write_fmt(format_args!("Token {{ {:?} {:?} {} }}", self.tt, self.quoted, self.value))
-  }
-}
-
-trait QuotedToken {
-  fn new(tt: TokenType, value: impl Into<String>, quoted: Option<bool>) -> Self;
-}
-
-trait BasicToken {
-  fn new(tt: TokenType, value: impl Into<String>) -> Self;
-}
-
-impl QuotedToken for Token {
-  fn new(tt: TokenType, value: impl Into<String>, quoted: Option<bool>) -> Self {
-    Self { tt, value: value.into(), quoted }
-  }
-}
-
-impl BasicToken for Token {
-  fn new(tt: TokenType, value: impl Into<String>) -> Self {
-    Self { tt, value: value.into(), quoted: None }
-  }
-}
-
-pub struct Lexer<'a> {
-  iterator: Box<dyn Iterator<Item = char> + 'a>,
-  tokens: Vec<Token>,
-  is_quoted: bool,
-
-  object_track: Vec<bool>,
-  key_track: Vec<bool>,
-}
-
-impl<'a> Lexer<'a> {
-  pub fn new(json: &'a str) -> Self {
-    Self {
-      iterator: Box::new(json.chars()), 
-      tokens: Vec::new(),
-      is_quoted: false, 
-
-      object_track: Vec::new(),
-      key_track: Vec::new(),
-    }
-
-  }
-}
-
-impl<'a> Lexer<'a> {
-  pub fn tokenize(&mut self) -> &Vec<Token> {
-    loop { if !self.next() { break; } }
-    &self.tokens
-  }
-
-  fn next(&mut self) -> bool {
-    if let Some(mut c) = self.iterator.next() {
-      'label: loop {
-        if c == ' ' || c == '\n' || c == '\t' {
-          break 'label; 
-        }
-
-        if self.is_quoted || (c != '"' && self.key_track.len() > 0 && !*self.key_track.last().unwrap()) {
-          self.add_content(&mut c);
-        }
-
-        if c == '"' {
-          self.is_quoted = !self.is_quoted;
-        } else if c == '{' && !self.is_quoted {
-          self.object_track.push(true);
-          self.key_track.push(true);
-          self.tokens.push(BasicToken::new(TokenType::ObjectStart, c));
-        } else if c == '}' && !self.is_quoted {
-          self.object_track.pop();
-          self.key_track.pop();
-          self.tokens.push(BasicToken::new(TokenType::ObjectEnd, c));
-        } else if c == '[' && !self.is_quoted {
-          self.object_track.push(false);
-          self.key_track.push(false);
-          self.tokens.push(BasicToken::new(TokenType::ArrayStart, c));
-        } else if c == ']' && !self.is_quoted {
-          self.object_track.pop();
-          self.key_track.pop();
-          self.tokens.push(BasicToken::new(TokenType::ArrayEnd, c));
-        } else if c == ':' && !self.is_quoted {
-          self.key_track.pop();
-          self.key_track.push(false);
-          self.tokens.push(BasicToken::new(TokenType::ContentSeparator, c));
-        } else if c == ',' && !self.is_quoted {
-          self.key_track.pop();
-          self.key_track.push(*self.object_track.last().unwrap());
-          self.tokens.push(BasicToken::new(TokenType::ElementSeparator, c));
-        }
-
-        break 'label;
-      }
-
-      return true;
-    } 
-
-    false
-  }
-
-  fn add_content(&mut self, c: &mut char) {
-    let checkers = [',','}','{',']','[',' ','\n','\t'];
-    if checkers.contains(c) { return; }
-
-    let mut content = String::from(*c);
-    let mut is_escape = false;
-    let is_quoted = self.is_quoted;
-    while let Some(q) = self.iterator.next() {
-        if q == '"' && !is_escape {
-          self.is_quoted = !self.is_quoted;
-          break;
-        } else if !self.is_quoted && !is_escape && checkers.contains(&q) {
-          *c = q;
-          break;
-        } else if q == '\\' && !is_escape {
-          is_escape = true;
-        } else {
-          is_escape = false;
-        }
-
-        content.push(q);
-    }
-
-    if *self.key_track.last().unwrap() {
-      self.tokens.push(BasicToken::new(TokenType::JsonKey, content));
-    } else {
-      self.tokens.push(QuotedToken::new(TokenType::JsonValue, content, Some(is_quoted)));
-    }
-  }
-}
-
-pub struct ObjectParser<'a> {
-  tokens: &'a Vec<Token>,
-  objects: Vec<JsonObject>,
-}
-
-impl <'a> ObjectParser<'a> {
-  pub fn new(tokens: &'a Vec<Token>) -> Self {
-    Self { tokens: tokens, objects: vec![JsonObject::new()] }
-  }
-}
-
-impl <'a> ObjectParser<'a> {
-  pub fn parse(&mut self) {
-    let mut iter = self.tokens.iter().enumerate();
-    let mut key: &String = &String::new();
-
-    while let Some((i, token)) = iter.next() {
-      if i == 0 {
-        if token.tt == TokenType::ObjectStart {
-          continue;
-        } else {
-          panic!("Invalid token given! Token: {}", token)
-        }
-      } 
-
-      if token.tt == TokenType::JsonKey {
-        key = &token.value;
-      } else if token.tt == TokenType::JsonValue {
-        match self.objects.last_mut() {
-            Some(json_object) => {
-                let k = key.clone();
-                let v = token.value.clone();
-                json_object.insert(k, v);
-            }
-            _ => panic!("Unable to get last object!"),  
-        } 
-      }
-    }
-  }
-
-  pub fn print(&mut self) {
-    for e in &self.objects {
-      println!("Object: {:?}", e);
-    }
-  }
-}
-// WORKING...

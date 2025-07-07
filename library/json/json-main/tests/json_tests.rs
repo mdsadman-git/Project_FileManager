@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-  use json_main::{Json, JsonArray, JsonBuilder, JsonNull, Lexer, ObjectParser};
+  use json_main::{Json, JsonArray, JsonBuilder, JsonNull};
   use logger_main::Logger;
 
   #[test]
@@ -12,96 +12,16 @@ mod tests {
     json_object.insert("key4", JsonNull::new());
 
     println!("--- Generated Json ---");
-    // let json_value_key1_string: String = json_object.get("key1").unwrap().into();
-    // let json_value_key2_i32: i32 = json_object.get("key2").unwrap().into();
-    // let json_value_key3_bool: bool = json_object.get("key3").unwrap().into();
-    // let json_value_key4_null: Option<String> = json_object.get("key4").unwrap().into();
+    let json_value_key1_string: String = json_object.get("key1").unwrap().into();
+    let json_value_key2_i32: i32 = json_object.get("key2").unwrap().into();
+    let json_value_key3_bool: bool = json_object.get("key3").unwrap().into();
+    let json_value_key4_null: Option<String> = json_object.get("key4").unwrap().into();
 
-    // println!("STRING: {}", json_value_key1_string);
-    // println!("NUMBER: {}", json_value_key2_i32);
-    // println!("BOOL:   {}", json_value_key3_bool);
-    // println!("NULL:   {:?}", json_value_key4_null);
+    println!("STRING: {}", json_value_key1_string);
+    println!("NUMBER: {}", json_value_key2_i32);
+    println!("BOOL:   {}", json_value_key3_bool);
+    println!("NULL:   {:?}", json_value_key4_null);
     println!("--- Generated Json ---");
-  }
-
-  #[test]
-  fn json_object_parser_test() {
-    let json = String::from(r#"
-      {
-        "key4": null,
-        "key3": true,
-        "key1": "string0",
-        "key2": 123
-      }
-    "#);
-
-    let mut lexer = Lexer::new(json.as_str());
-    let tokens = lexer.tokenize();
-    Logger::info("Tokenized List");
-    for e in tokens {
-      println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
-    }
-
-    let mut parser = ObjectParser::new(tokens);
-    parser.parse();
-    parser.print();
-  }
-
-  #[test]
-  fn json_parser_test() {
-    let json = String::from(r#"
-      {
-        "array_1": [
-          {
-            "key1": "string2",
-            "key2": 456,
-            "key3": false,
-            "key4": null
-          },
-          {
-            "key3": false,
-            "key4": null,
-            "key1": "string2",
-            "key2": 456
-          }
-        ],
-        "key4": null,
-        "array_2": [
-          [
-            1,
-            2,
-            3
-          ],
-          [
-            "1",
-            "2",
-            "3"
-          ],
-          [
-            3.1415,
-            100,
-            "Hello",
-            false,
-            null
-          ]
-        ],
-        "key3": true,
-        "object_1": {
-          "key2": 456,
-          "key4": null,
-          "key1": "string1",
-          "key3": false
-        },
-        "key1": "string0",
-        "key2": 123
-      }
-    "#);
-    let mut lexer = Lexer::new(json.as_str());
-    let v = lexer.tokenize();
-    Logger::info("Tokenized List");
-    for e in v {
-      println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
-    }
   }
 
   #[test]
