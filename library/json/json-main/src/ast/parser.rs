@@ -30,6 +30,72 @@ impl FnVec for Vec<Option<Box<dyn Expression>>> {
 }
 // LOCAL CUSTOM TYPES
 
+// LOCAL MACROS
+macro_rules! expression_impl {
+  ($identifier:ident) => {
+    impl Expression for $identifier {
+      fn debug_str(&self) -> String {
+        format!("{:?}", self) 
+      }
+
+      fn to_ref(&self) -> &dyn Any {
+        self
+      }
+
+      fn to_mut(&mut self) -> &mut dyn Any {
+        self
+      }
+
+      fn ex_clone(&self) -> Box<dyn Expression> {
+        Box::new(self.clone())
+      }
+    }
+  };
+}
+
+macro_rules! literal_impl {
+  ($identifier:ident) => {
+    impl Literal for $identifier {
+      fn lit_clone(&self) -> Box<dyn Literal> {
+        Box::new(self.clone())
+      }
+    }
+  };
+}
+
+macro_rules! expression_gn_impl {
+  ($identifier:ident) => {
+    impl <T: Clone + Debug + 'static> Expression for $identifier<T> {
+      fn debug_str(&self) -> String {
+        format!("{:?}", self) 
+      }
+
+      fn to_ref(&self) -> &dyn Any {
+        self
+      }
+
+      fn to_mut(&mut self) -> &mut dyn Any {
+        self
+      }
+
+      fn ex_clone(&self) -> Box<dyn Expression> {
+        Box::new(self.clone())
+      }
+    }
+  };
+}
+
+macro_rules! literal_gn_impl {
+  ($identifier:ident) => {
+    impl <T: Clone + Debug + 'static> Literal for $identifier<T> {
+      fn lit_clone(&self) -> Box<dyn Literal> {
+        Box::new(self.clone())
+      }
+    }
+  };
+}
+// LOCAL MACROS
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum NodeType {
   ObjectExpression, 
@@ -66,30 +132,6 @@ struct ObjectExpression {
   lit_objects: Vec<ObjectLiteral>,
 }
 
-impl Expression for ObjectExpression {
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-      Box::new(self.clone())
-  }
-}
-
-impl Literal for ObjectExpression {
-    fn lit_clone(&self) -> Box<dyn Literal> {
-      Box::new(self.clone())
-    }
-}
-
 impl ObjectExpression {
   pub fn new() -> Self {
     Self { lit_objects: Vec::new() }
@@ -105,31 +147,6 @@ impl ObjectExpression {
 #[derive(Debug, Clone)]
 struct ArrayExpression {
   lit_elements: Vec<ArrayLiteral>,
-}
-
-impl Expression for ArrayExpression {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
-impl Literal for ArrayExpression {
-  fn lit_clone(&self) -> Box<dyn Literal> {
-    Box::new(self.clone())
-  }
 }
 
 impl ArrayExpression {
@@ -149,31 +166,6 @@ struct StringLiteral {
   value: String,
 }
 
-impl Expression for StringLiteral {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
-impl Literal for StringLiteral {
-  fn lit_clone(&self) -> Box<dyn Literal> {
-    Box::new(self.clone())
-  }
-}
-
 impl StringLiteral {
   pub fn new(value: String) -> Self {
     Self { value }
@@ -183,31 +175,6 @@ impl StringLiteral {
 #[derive(Debug, Clone)]
 struct NumericLiteral<T: Clone> {
   value: T,
-}
-
-impl <T: Clone + Debug + 'static> Expression for NumericLiteral<T> {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
-impl <T: Clone + Debug + 'static> Literal for NumericLiteral<T> {
-  fn lit_clone(&self) -> Box<dyn Literal> {
-    Box::new(self.clone())
-  }
 }
 
 impl <T: Clone + 'static> NumericLiteral<T> {
@@ -238,31 +205,6 @@ struct BooleanLiteral {
   value: bool,
 }
 
-impl Expression for BooleanLiteral {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
-impl Literal for BooleanLiteral {
-  fn lit_clone(&self) -> Box<dyn Literal> {
-    Box::new(self.clone())
-  }
-}
-
 impl BooleanLiteral {
   pub fn new(value: bool) -> Self {
     Self { value }
@@ -270,38 +212,26 @@ impl BooleanLiteral {
 }
 
 #[derive(Debug, Clone)]
-struct NullLiteral {}
-
-impl Expression for NullLiteral {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone()) 
-  }
-}
-
-impl Literal for NullLiteral {
-  fn lit_clone(&self) -> Box<dyn Literal> {
-    Box::new(self.clone())
-  }
-}
+struct NullLiteral;
 
 impl NullLiteral {
   pub fn new() -> Self {
     Self { }
   }
 }
+
+expression_impl!(ObjectExpression);
+literal_impl!(ObjectExpression);
+expression_impl!(ArrayExpression);
+literal_impl!(ArrayExpression);
+expression_impl!(StringLiteral);
+literal_impl!(StringLiteral);
+expression_impl!(NullLiteral);
+literal_impl!(NullLiteral);
+expression_impl!(BooleanLiteral);
+literal_impl!(BooleanLiteral);
+expression_gn_impl!(NumericLiteral);
+literal_gn_impl!(NumericLiteral);
 
 #[derive(Debug, Clone)]
 struct ObjectKey {
