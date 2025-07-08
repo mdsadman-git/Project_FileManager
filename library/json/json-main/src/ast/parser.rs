@@ -6,12 +6,26 @@ use super::lexer::{Token, TokenType, ValueOf};
 // LOCAL CUSTOM TYPES
 trait FnVec {
   fn free_last(&mut self);
+  fn switch_last(&mut self, v: Option<Box<dyn Expression>>);
+  fn dc_mut<T: Any>(&mut self) -> &mut T;
 }
 
 impl FnVec for Vec<Option<Box<dyn Expression>>> {
   fn free_last(&mut self) {
     let last = self.last_mut().unwrap();
     *last = None
+  }
+
+  fn switch_last(&mut self, v: Option<Box<dyn Expression>>) {
+    if self.len() > 0 { 
+      self.pop();
+    }
+
+    self.push(v);
+  }
+  
+  fn dc_mut<T: Any>(&mut self) -> &mut T {
+    self.last_mut().unwrap().as_mut().unwrap().to_mut().downcast_mut::<T>().unwrap()
   }
 }
 // LOCAL CUSTOM TYPES
@@ -460,36 +474,52 @@ impl ArrayLiteral {
 
 #[derive(Debug)]
 struct Node {
-  node_type: NodeType,
+  nt: NodeType,
   root: Box<dyn Expression>,
 }
 
 impl Node {
   fn new(node_type: NodeType, root: Box<dyn Expression>) -> Self {
-    Self { node_type, root }
+    Self { nt: node_type, root }
   }
 }
 
 impl Node {
   fn is_object_expression(&self) -> bool {
-    self.node_type == NodeType::ObjectExpression
+    self.nt == NodeType::ObjectExpression
   }
 
   fn is_array_expression(&self) -> bool {
-    self.node_type == NodeType::ArrayExpression
+    self.nt == NodeType::ArrayExpression
   }
 }
 
 pub struct JsonParser<'a> {
   tokens: &'a Vec<Token>,
+  token: Option<&'a Token>,
   index: usize,
   nstack: Vec<Node>,
   lstack: Vec<Option<Box<dyn Expression>>>,
 }
 
 impl <'a> JsonParser<'a> {
+  fn advance(&mut self) {
+    self.index.add_assign(1);
+  }
+
+  fn next_token(&mut self) -> bool {
+    self.token = self.tokens.get(self.index);
+    self.token.is_none()
+  }
+
+  fn is_last(&self) -> bool {
+    self.index == self.tokens.len() - 1
+  }
+}
+
+impl <'a> JsonParser<'a> {
   pub fn new(tokens: &'a Vec<Token>) -> Self {
-    Self { tokens, index: 1, lstack: vec![None], nstack: match (tokens.get(0), tokens.get(tokens.len() - 1)) {
+    Self { tokens, index: 1, token: None, lstack: vec![None], nstack: match (tokens.get(0), tokens.get(tokens.len() - 1)) {
       (Some(start), Some(end)) if start.tt == TokenType::ObjectStart && end.tt == TokenType::ObjectEnd => {
         vec![Node::new(NodeType::ObjectExpression, Box::new(ObjectExpression::new()))]
       }
@@ -500,38 +530,42 @@ impl <'a> JsonParser<'a> {
     }}
   }
 
+  fn validate(&mut self, tt: &TokenType) {
+    match tt {
+      TokenType::ObjectEnd | TokenType::ArrayEnd => {
+        if self.nstack.last().is_none() {
+          panic!("Parser Exception: Last element of node stack must not none!");
+        }
+      },
+      TokenType::ArrayStart => {},
+      TokenType::ContentSeparator => {},
+      TokenType::ElementSeparator => {},
+      TokenType::JsonKey => {
+        if self.lstack.last().is_none() {
+          panic!("Parser Exception: Last expression should be none!");
+        }
+
+        if self.nstack.last().is_none() {
+          panic!("Parser Exception: Node not found for further execution!");
+        }
+
+        if !self.nstack.last().unwrap().is_object_expression() {
+          panic!("Parser Exception: Invalid node type for token 'JsonKey'!");
+        }
+      },
+      TokenType::JsonValue => {},
+      _ => {}
+    };
+  }
+
   pub fn parse(&mut self) {
-    if self.is_last() || self.nstack.is_empty() { return; }
+    if self.is_last() || self.nstack.is_empty() || self.next_token() { return; }
 
-    let current = self.tokens.get(self.index);
-    if let None = current { return; }
-
-    match current.unwrap() {
+    match self.token.unwrap() {
       token if token.tt == TokenType::JsonKey => {
-        if self.lstack.len() > 0 {
-          if let Some(_) = self.lstack.last().unwrap() {
-            panic!("Parser Exception: Last expression should be none!");
-          }
-        }
-
-        if let Some(n) = self.nstack.last() {
-          if n.node_type != NodeType::ObjectExpression {
-            panic!("Parser Exception: Invalid type for token 'JsonKey'! '{:?}'", n.type_id());
-          }
-        }
-
-        if self.lstack.len() > 0 {
-          self.lstack.pop();
-        }
-
-        self.lstack.push(Some(Box::new(ObjectLiteral::new())));
-        let le = self.lstack.last_mut().unwrap().as_mut().unwrap().to_mut().downcast_mut::<ObjectLiteral>().unwrap();
-        let literal = StringLiteral::new(token.value());
-        let object_key = ObjectKey::new(literal);
-        le.key(object_key);
-      }
-      token if token.tt == TokenType::ContentSeparator => {
-
+        self.validate(&token.tt);
+        self.lstack.switch_last(Some(Box::new(ObjectLiteral::new())));
+        self.lstack.dc_mut::<ObjectLiteral>().key(ObjectKey::new(StringLiteral::new(token.value())));
       }
       token if token.tt == TokenType::JsonValue => {
         match token.vof {
@@ -626,7 +660,7 @@ impl <'a> JsonParser<'a> {
         }
 
         let node = self.nstack.last_mut().unwrap();
-        match node.node_type {
+        match node.nt {
             NodeType::ObjectExpression => {
               let node_root = node.root.to_mut().downcast_mut::<ObjectExpression>().unwrap();
               let ls = ls.downcast_mut::<ObjectLiteral>().unwrap();
@@ -642,94 +676,47 @@ impl <'a> JsonParser<'a> {
 
         self.lstack.free_last();
       }
-      token if token.tt == TokenType::ElementSeparator => {
-
-      }
-      token if token.tt == TokenType::ObjectStart => {
-        if let Some(n) = self.nstack.last() {
-          if n.is_object_expression() && n.is_array_expression() {
-            panic!("Parser Exception: Invalid type for token 'JsonValue'! It must be an Object or Array expression");
-          }
-        }
-
-        let nn = Node::new(NodeType::ObjectExpression, Box::new(ObjectExpression::new()));
-        self.nstack.push(nn);
+      token if token.tt == TokenType::ObjectStart || token.tt == TokenType::ArrayStart => {
         self.lstack.push(None);
+        self.nstack.push(match token.tt {
+            TokenType::ObjectStart => Node::new(NodeType::ObjectExpression, Box::new(ObjectExpression::new())),
+            TokenType::ArrayStart => Node::new(NodeType::ArrayExpression, Box::new(ArrayExpression::new())),
+            _ => panic!("Parser Exception: Unknown type found!")
+        });
       }
-      token if token.tt == TokenType::ObjectEnd => {
-        if let Some(ln) = self.nstack.pop() {
-          self.lstack.pop();
+      token if token.tt == TokenType::ObjectEnd || token.tt == TokenType::ArrayEnd => {
+        self.validate(&token.tt);
+        let ln = self.nstack.pop().unwrap();
+        self.lstack.pop();
 
-          let vl = ln.root.to_ref().downcast_ref::<ObjectExpression>().unwrap().clone();
-          let node = self.nstack.last_mut().unwrap();
-          match node.node_type {
-            NodeType::ObjectExpression => {
-              let le = self.lstack.last_mut().unwrap().as_mut().unwrap().to_mut().downcast_mut::<ObjectLiteral>().unwrap();
-              le.value(ValueLiteral::new(Box::new(vl)));
+        let node = self.nstack.last_mut().unwrap();
+        let vl: Box<dyn Literal> = match token.tt {
+            TokenType::ObjectEnd => Box::new(ln.root.to_ref().downcast_ref::<ObjectExpression>().unwrap().clone()),
+            TokenType::ArrayEnd => Box::new(ln.root.to_ref().downcast_ref::<ArrayExpression>().unwrap().clone()),
+            _ => panic!("Parser Exception: Unknown type found!")
+        };
+        match node.nt {
+          NodeType::ObjectExpression => {
+            let le = self.lstack.last_mut().unwrap().as_mut().unwrap().to_mut().downcast_mut::<ObjectLiteral>().unwrap();
+            le.value(ValueLiteral::new(vl));
 
-              let nr = node.root.to_mut().downcast_mut::<ObjectExpression>().unwrap();
-              nr.add(le.clone());
-            },
-            NodeType::ArrayExpression => {
-              let nr = node.root.to_mut().downcast_mut::<ArrayExpression>().unwrap();
-              nr.add(ArrayLiteral::init(ValueLiteral::new(Box::new(vl))));
-            },
-            _ => {} // TODO: ADD PANIC IF NECESSARY
-          }
-
-          self.lstack.free_last();
-        }
-      }
-      token if token.tt == TokenType::ArrayStart => {
-        if let Some(n) = self.nstack.last() {
-          if n.is_object_expression() && n.is_array_expression() {
-            panic!("Parser Exception: Invalid type for token 'JsonValue'! It must be an Object or Array expression");
-          }
+            let nr = node.root.to_mut().downcast_mut::<ObjectExpression>().unwrap();
+            nr.add(le.clone());
+          },
+          NodeType::ArrayExpression => {
+            let nr = node.root.to_mut().downcast_mut::<ArrayExpression>().unwrap();
+            nr.add(ArrayLiteral::init(ValueLiteral::new(vl)));
+          },
+          _ => panic!("Parser Exception: Invalid node type has given! Node Type: {:?}", node.nt),
         }
 
-        let nn = Node::new(NodeType::ArrayExpression, Box::new(ArrayExpression::new()));
-        self.nstack.push(nn);
-        self.lstack.push(None);
-      }
-      token if token.tt == TokenType::ArrayEnd => {
-        if let Some(ln) = self.nstack.pop() {
-          self.lstack.pop();
-
-          let vl = ln.root.to_ref().downcast_ref::<ArrayExpression>().unwrap().clone();
-          let node = self.nstack.last_mut().unwrap();
-          match node.node_type {
-            NodeType::ObjectExpression => {
-              let le = self.lstack.last_mut().unwrap().as_mut().unwrap().to_mut().downcast_mut::<ObjectLiteral>().unwrap();
-              le.value(ValueLiteral::new(Box::new(vl)));
-
-              let nr = node.root.to_mut().downcast_mut::<ObjectExpression>().unwrap();
-              nr.add(le.clone());
-            },
-            NodeType::ArrayExpression => {
-              let nr = node.root.to_mut().downcast_mut::<ArrayExpression>().unwrap();
-              nr.add(ArrayLiteral::init(ValueLiteral::new(Box::new(vl))));
-            },
-            _ => {} // TODO: ADD PANIC IF NECESSARY
-          }
-
-          self.lstack.free_last();
-        }
+        self.lstack.free_last();
       }
       _ => {} 
     }
     
     self.advance(); 
     self.parse();
-  }
-}
-
-impl <'a> JsonParser<'a> {
-  fn advance(&mut self) {
-    self.index.add_assign(1);
-  }
-
-  fn is_last(&self) -> bool {
-    self.index == self.tokens.len() - 1
   }
 }
 
