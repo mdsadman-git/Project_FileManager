@@ -96,14 +96,6 @@ macro_rules! literal_gn_impl {
 }
 // LOCAL MACROS
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum NodeType {
-  ObjectExpression, 
-  ArrayExpression,
-  ObjectLiteral,
-  ArrayLiteral,
-}
-
 trait Expression {
   fn debug_str(&self) -> String;
   fn to_ref(&self) -> &dyn Any;
@@ -173,11 +165,11 @@ impl StringLiteral {
 }
 
 #[derive(Debug, Clone)]
-struct NumericLiteral<T: Clone> {
+struct NumericLiteral<T: Clone + Debug + 'static> {
   value: T,
 }
 
-impl <T: Clone + 'static> NumericLiteral<T> {
+impl <T: Clone + Debug + 'static> NumericLiteral<T> {
   pub fn new(value: T) -> Self {
     let supported_num_types = vec![
       TypeId::of::<u8>(),
@@ -209,6 +201,11 @@ impl BooleanLiteral {
   pub fn new(value: bool) -> Self {
     Self { value }
   }
+
+  fn is_bool(v: impl Into<String>) -> bool {
+    let v: String = v.into();
+    v.eq_ignore_ascii_case("true") || v.eq_ignore_ascii_case("false")
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -216,7 +213,12 @@ struct NullLiteral;
 
 impl NullLiteral {
   pub fn new() -> Self {
-    Self { }
+    Self {}
+  }
+
+  fn is_null(v: impl Into<String>) -> bool {
+    let v: String = v.into();
+    v.eq_ignore_ascii_case("null")
   }
 }
 
@@ -402,25 +404,30 @@ impl ArrayLiteral {
   }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum ExpressionType {
+  Object, Array,
+}
+
 #[derive(Debug)]
 struct Node {
-  nt: NodeType,
+  et: ExpressionType,
   root: Box<dyn Expression>,
 }
 
 impl Node {
-  fn new(node_type: NodeType, root: Box<dyn Expression>) -> Self {
-    Self { nt: node_type, root }
+  fn new(node_type: ExpressionType, root: Box<dyn Expression>) -> Self {
+    Self { et: node_type, root }
   }
 }
 
 impl Node {
   fn is_object_expression(&self) -> bool {
-    self.nt == NodeType::ObjectExpression
+    self.et == ExpressionType::Object
   }
 
   fn is_array_expression(&self) -> bool {
-    self.nt == NodeType::ArrayExpression
+    self.et == ExpressionType::Array
   }
 }
 
@@ -445,31 +452,14 @@ impl <'a> JsonParser<'a> {
   fn is_last(&self) -> bool {
     self.index == self.tokens.len() - 1
   }
-}
 
-impl <'a> JsonParser<'a> {
-  pub fn new(tokens: &'a Vec<Token>) -> Self {
-    Self { tokens, index: 1, token: None, lstack: vec![None], nstack: match (tokens.get(0), tokens.get(tokens.len() - 1)) {
-      (Some(start), Some(end)) if start.tt == TokenType::ObjectStart && end.tt == TokenType::ObjectEnd => {
-        vec![Node::new(NodeType::ObjectExpression, Box::new(ObjectExpression::new()))]
-      }
-      (Some(start), Some(end)) if start.tt == TokenType::ArrayStart && end.tt == TokenType::ArrayEnd => {
-        vec![Node::new(NodeType::ArrayExpression, Box::new(ArrayExpression::new()))]
-      }
-      _ => panic!("Parser Exception: Invalid Json! Json is not an object or an array type!")
-    }}
-  }
-
-  fn validate(&mut self, tt: &TokenType) {
-    match tt {
+  fn validate(&mut self, ct: &Token) {
+    match ct.tt {
       TokenType::ObjectEnd | TokenType::ArrayEnd => {
         if self.nstack.last().is_none() {
           panic!("Parser Exception: Last element of node stack must not none!");
         }
       },
-      TokenType::ArrayStart => {},
-      TokenType::ContentSeparator => {},
-      TokenType::ElementSeparator => {},
       TokenType::JsonKey => {
         if self.lstack.last().is_none() {
           panic!("Parser Exception: Last expression should be none!");
@@ -483,9 +473,43 @@ impl <'a> JsonParser<'a> {
           panic!("Parser Exception: Invalid node type for token 'JsonKey'!");
         }
       },
-      TokenType::JsonValue => {},
+      TokenType::JsonValue => {
+        match ct.vof {
+          ValueOf::Array => {},
+          ValueOf::Object => if let None = self.lstack.last() {
+            panic!("Parser Exception: Last expression should not be none!");
+          }, 
+          _ => panic!("Parser Exception: Unknown value type is given!")
+        }
+
+        if self.nstack.last().is_none() {
+            panic!("Parser Exception: No node found to proceed!");
+        }
+
+        if self.nstack.last().is_some_and(|n| !n.is_array_expression() && !n.is_object_expression()) {
+          panic!("Parser Exception: Invalid type for token 'JsonValue'!");
+        }
+
+        if let None = ct.quoted {
+          panic!("Parser Exception: Token quoted type is undefined for 'JsonValue'")
+        }
+      },
       _ => {}
     };
+  }
+}
+
+impl <'a> JsonParser<'a> {
+  pub fn new(tokens: &'a Vec<Token>) -> Self {
+    Self { tokens, index: 1, token: None, lstack: vec![None], nstack: match (tokens.get(0), tokens.get(tokens.len() - 1)) {
+      (Some(start), Some(end)) if start.tt == TokenType::ObjectStart && end.tt == TokenType::ObjectEnd => {
+        vec![Node::new(ExpressionType::Object, Box::new(ObjectExpression::new()))]
+      }
+      (Some(start), Some(end)) if start.tt == TokenType::ArrayStart && end.tt == TokenType::ArrayEnd => {
+        vec![Node::new(ExpressionType::Array, Box::new(ArrayExpression::new()))]
+      }
+      _ => panic!("Parser Exception: Invalid Json! Json is not an object or an array type!")
+    }}
   }
 
   pub fn parse(&mut self) {
@@ -493,30 +517,16 @@ impl <'a> JsonParser<'a> {
 
     match self.token.unwrap() {
       token if token.tt == TokenType::JsonKey => {
-        self.validate(&token.tt);
+        self.validate(&token);
         self.lstack.switch_last(Some(Box::new(ObjectLiteral::new())));
         self.lstack.dc_mut::<ObjectLiteral>().key(ObjectKey::new(StringLiteral::new(token.value())));
       }
       token if token.tt == TokenType::JsonValue => {
-        match token.vof {
-          ValueOf::Object => if let None = self.lstack.last() {
-            panic!("Parser Exception: Last expression should not be none!");
-          }, 
-          ValueOf::Array => {
-            self.lstack.pop();
-            self.lstack.push(Some(Box::new(ArrayLiteral::new())));
-          },
-          _ => panic!("Parser Exception: Unknown value type is given!")
-        }
+        self.validate(&token);
 
-        if let Some(n) = self.nstack.last() {
-          if !n.is_object_expression() && !n.is_array_expression() {
-            panic!("Parser Exception: Invalid type for token 'JsonValue'!");
-          }
-        }
-
-        if let None = token.quoted {
-          panic!("Parser Exception: Token quoted type is undefined for 'JsonValue'")
+        if token.vof == ValueOf::Array {
+          self.lstack.pop();
+          self.lstack.push(Some(Box::new(ArrayLiteral::new())));
         }
 
         let ls = self.lstack.last_mut().unwrap().as_mut().unwrap().to_mut();
@@ -524,98 +534,87 @@ impl <'a> JsonParser<'a> {
             Some(v) => Box::new(v),
             None => match ls.downcast_mut::<ArrayLiteral>() {
                 Some(v) => Box::new(v),
-                None => panic!("Parser Exception: Invalid literal type given! Only Array or Object is valid literal type."),
+                None => panic!("Parser Exception: Invalid literal type found! Only Array or Object is valid literal type."),
             },
         };
 
         match token.quoted.unwrap() {
-          true => {
-            let lit_value = ValueLiteral::new(Box::new(StringLiteral::new(token.value())));
-            lx.inject(lit_value);
-          }
+          true => lx.inject(ValueLiteral::new(Box::new(StringLiteral::new(token.value())))),
           false => {
             match &token.value {
-              v if v == "true" || v == "false" => {
-                let lit_value = ValueLiteral::new(Box::new(BooleanLiteral::new(v.parse::<bool>().unwrap())));
-                lx.inject(lit_value);
-              }
-              v if v == "null" => {
-                let lit_value = ValueLiteral::new(Box::new(NullLiteral::new()));
-                lx.inject(lit_value);
-              }
+              v if BooleanLiteral::is_bool(v) => lx.inject(ValueLiteral::new(Box::new(BooleanLiteral::new(v.parse::<bool>().unwrap())))),
+              v if NullLiteral::is_null(v) => lx.inject(ValueLiteral::new(Box::new(NullLiteral::new()))),
               _  => {
                 let tv: Vec<&str> = token.value.matches(char::is_numeric).collect();
-                let lit_value: ValueLiteral; 
                 if tv.len() != token.value.len() {
-                  panic!("Parsing Exception: Unknown 'JsonValue' found, {}", token.value);
+                  panic!("Parsing Exception: Unknown value found! {}", token.value);
                 }
 
                 if let Ok(p) = token.value.parse::<u8>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
                 if let Ok(p) = token.value.parse::<u16>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
                 if let Ok(p) = token.value.parse::<u32>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
                 if let Ok(p) = token.value.parse::<u64>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
                 if let Ok(p) = token.value.parse::<i8>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
                 if let Ok(p) = token.value.parse::<i16>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
                 if let Ok(p) = token.value.parse::<i32>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
                 if let Ok(p) = token.value.parse::<i64>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else 
                 if let Ok(p) = token.value.parse::<f32>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else 
                 if let Ok(p) = token.value.parse::<f64>() {
-                  lit_value = ValueLiteral::new(Box::new(NumericLiteral::new(p)));
+                  lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else {
                   panic!("Parsing Exception: Unknown numeric value provided, {}", token.value);
                 }
-
-                lx.inject(lit_value);
               }
             }
           }
         }
 
-        let node = self.nstack.last_mut().unwrap();
-        match node.nt {
-            NodeType::ObjectExpression => {
-              let node_root = node.root.to_mut().downcast_mut::<ObjectExpression>().unwrap();
-              let ls = ls.downcast_mut::<ObjectLiteral>().unwrap();
-              node_root.add(ls.clone());
-            },
-            NodeType::ArrayExpression => {
-              let node_root = node.root.to_mut().downcast_mut::<ArrayExpression>().unwrap();
-              let ls = ls.downcast_mut::<ArrayLiteral>().unwrap();
-              node_root.add(ls.clone());
-            },
-            _ => {}
-        }
+        if let Some(node) = self.nstack.last_mut() {
+          if let Some(root) = Some(node.root.to_mut()) {
+            match node.et {
+                ExpressionType::Object => {
+                  root.downcast_mut::<ObjectExpression>().unwrap().add(ls.downcast_mut::<ObjectLiteral>().unwrap().clone());
+                },
+                ExpressionType::Array => {
+                  root.downcast_mut::<ArrayExpression>().unwrap().add(ls.downcast_mut::<ArrayLiteral>().unwrap().clone());
+                },
+                _ => panic!("Parser Exception: Unsupported parent node type found!"),
+            }
+          }
 
-        self.lstack.free_last();
+          self.lstack.free_last();
+        } else {
+          panic!("Parser Exception: No parent node found to store the value!");
+        }
       }
       token if token.tt == TokenType::ObjectStart || token.tt == TokenType::ArrayStart => {
         self.lstack.push(None);
         self.nstack.push(match token.tt {
-            TokenType::ObjectStart => Node::new(NodeType::ObjectExpression, Box::new(ObjectExpression::new())),
-            TokenType::ArrayStart => Node::new(NodeType::ArrayExpression, Box::new(ArrayExpression::new())),
+            TokenType::ObjectStart => Node::new(ExpressionType::Object, Box::new(ObjectExpression::new())),
+            TokenType::ArrayStart => Node::new(ExpressionType::Array, Box::new(ArrayExpression::new())),
             _ => panic!("Parser Exception: Unknown type found!")
         });
       }
       token if token.tt == TokenType::ObjectEnd || token.tt == TokenType::ArrayEnd => {
-        self.validate(&token.tt);
+        self.validate(&token);
         let ln = self.nstack.pop().unwrap();
         self.lstack.pop();
 
@@ -625,19 +624,19 @@ impl <'a> JsonParser<'a> {
             TokenType::ArrayEnd => Box::new(ln.root.to_ref().downcast_ref::<ArrayExpression>().unwrap().clone()),
             _ => panic!("Parser Exception: Unknown type found!")
         };
-        match node.nt {
-          NodeType::ObjectExpression => {
+        match node.et {
+          ExpressionType::Object => {
             let le = self.lstack.last_mut().unwrap().as_mut().unwrap().to_mut().downcast_mut::<ObjectLiteral>().unwrap();
             le.value(ValueLiteral::new(vl));
 
             let nr = node.root.to_mut().downcast_mut::<ObjectExpression>().unwrap();
             nr.add(le.clone());
           },
-          NodeType::ArrayExpression => {
+          ExpressionType::Array => {
             let nr = node.root.to_mut().downcast_mut::<ArrayExpression>().unwrap();
             nr.add(ArrayLiteral::init(ValueLiteral::new(vl)));
           },
-          _ => panic!("Parser Exception: Invalid node type has given! Node Type: {:?}", node.nt),
+          _ => panic!("Parser Exception: Invalid node type has given! Node Type: {:?}", node.et),
         }
 
         self.lstack.free_last();
@@ -652,6 +651,7 @@ impl <'a> JsonParser<'a> {
 
 impl <'a> JsonParser<'a> {
   fn print(&self) {
+    // TODO: UPDATE THE PRINTING!!!
     println!("NODE: {:?}", self.nstack.last())
   }
 }
