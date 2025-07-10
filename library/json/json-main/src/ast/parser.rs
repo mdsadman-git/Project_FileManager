@@ -96,6 +96,27 @@ macro_rules! literal_gn_impl {
 }
 // LOCAL MACROS
 
+// MACRO DECLARATION
+expression_impl!(ObjectExpression);
+literal_impl!(ObjectExpression);
+expression_impl!(ArrayExpression);
+literal_impl!(ArrayExpression);
+expression_impl!(StringLiteral);
+
+literal_impl!(StringLiteral);
+expression_impl!(NullLiteral);
+literal_impl!(NullLiteral);
+expression_impl!(BooleanLiteral);
+literal_impl!(BooleanLiteral);
+expression_gn_impl!(NumericLiteral);
+literal_gn_impl!(NumericLiteral);
+expression_impl!(ObjectLiteral);
+expression_impl!(ArrayLiteral);
+
+expression_impl!(KeyLiteral);
+expression_impl!(ValueLiteral);
+// MACRO DECLARATION
+
 trait Expression {
   fn debug_str(&self) -> String;
   fn to_ref(&self) -> &dyn Any;
@@ -222,44 +243,12 @@ impl NullLiteral {
   }
 }
 
-expression_impl!(ObjectExpression);
-literal_impl!(ObjectExpression);
-expression_impl!(ArrayExpression);
-literal_impl!(ArrayExpression);
-expression_impl!(StringLiteral);
-literal_impl!(StringLiteral);
-expression_impl!(NullLiteral);
-literal_impl!(NullLiteral);
-expression_impl!(BooleanLiteral);
-literal_impl!(BooleanLiteral);
-expression_gn_impl!(NumericLiteral);
-literal_gn_impl!(NumericLiteral);
-
 #[derive(Debug, Clone)]
-struct ObjectKey {
+struct KeyLiteral {
   lit_string: StringLiteral,
 }
 
-impl Expression for ObjectKey {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
-impl ObjectKey {
+impl KeyLiteral {
   pub fn new(lit_string: StringLiteral) -> Self {
     Self { lit_string }
   }
@@ -276,25 +265,6 @@ impl Clone for ValueLiteral {
   }
 }
 
-impl Expression for ValueLiteral {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
 impl ValueLiteral {
   pub fn new(literal: Box<dyn Literal>) -> Self {
     Self { literal }
@@ -307,33 +277,8 @@ trait ValueLiteralInjector {
 
 #[derive(Debug, Clone)]
 struct ObjectLiteral {
-  key: Option<ObjectKey>,
+  key: Option<KeyLiteral>,
   value: Option<ValueLiteral>,
-}
-
-impl Expression for ObjectLiteral {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
-impl Literal for ObjectLiteral {
-  fn lit_clone(&self) -> Box<dyn Literal> {
-    Box::new(self.clone())
-  }
 }
 
 impl ObjectLiteral {
@@ -349,7 +294,7 @@ impl ValueLiteralInjector for ObjectLiteral {
 }
 
 impl ObjectLiteral {
-  pub fn key(&mut self, key: ObjectKey) {
+  pub fn key(&mut self, key: KeyLiteral) {
     self.key = Some(key);
   }
 
@@ -361,31 +306,6 @@ impl ObjectLiteral {
 #[derive(Debug, Clone)]
 struct ArrayLiteral {
   value: Option<ValueLiteral>,
-}
-
-impl Expression for ArrayLiteral {
-
-  fn debug_str(&self) -> String {
-    format!("{:?}", self) 
-  }
-
-  fn to_ref(&self) -> &dyn Any {
-    self
-  }
-
-  fn to_mut(&mut self) -> &mut dyn Any {
-    self
-  }
-
-  fn ex_clone(&self) -> Box<dyn Expression> {
-    Box::new(self.clone())
-  }
-}
-
-impl Literal for ArrayLiteral {
-  fn lit_clone(&self) -> Box<dyn Literal> {
-    Box::new(self.clone())
-  }
 }
 
 impl ValueLiteralInjector for ArrayLiteral {
@@ -519,7 +439,7 @@ impl <'a> JsonParser<'a> {
       token if token.tt == TokenType::JsonKey => {
         self.validate(&token);
         self.lstack.switch_last(Some(Box::new(ObjectLiteral::new())));
-        self.lstack.dc_mut::<ObjectLiteral>().key(ObjectKey::new(StringLiteral::new(token.value())));
+        self.lstack.dc_mut::<ObjectLiteral>().key(KeyLiteral::new(StringLiteral::new(token.value())));
       }
       token if token.tt == TokenType::JsonValue => {
         self.validate(&token);
@@ -646,8 +566,117 @@ impl <'a> JsonParser<'a> {
 
 impl <'a> JsonParser<'a> {
   fn print(&self) {
-    // TODO: UPDATE THE PRINTING!!!
-    println!("NODE: {:?}", self.nstack.last())
+    println!("-- Json Parser Tree --");
+    let _tab: usize = 3;
+
+    println!("OLD");
+    println!("{:?}", self.nstack.last());
+
+    println!("NEW");
+    fn fun(ol: Box<&dyn Expression>, tab_count: usize, tab: usize) { 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ObjectLiteral>() {
+        println!("{} ObjectLiteral", " ".repeat(tab_count));
+        fun(Box::new(v.key.as_ref().unwrap()), tab_count + tab, tab);
+        fun(Box::new(v.value.as_ref().unwrap()), tab_count + tab, tab);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<KeyLiteral>() {
+        println!("{} KeyLiteral", " ".repeat(tab_count));
+        fun(Box::new(&v.lit_string), tab_count + tab, tab);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<StringLiteral>() {
+        println!("{} StringLiteral: '{}'", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(_) = ol.as_ref().to_ref().downcast_ref::<NullLiteral>() {
+        println!("{} NullLiteral", " ".repeat(tab_count));
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<BooleanLiteral>() {
+        println!("{} BoolLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u8>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u16>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u32>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i8>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i16>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i32>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<f32>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ValueLiteral>() {
+        println!("{} ValueLiteral", " ".repeat(tab_count));
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<StringLiteral>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NullLiteral>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<BooleanLiteral>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u8>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u16>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u32>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i8>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i16>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i32>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<f32>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+          fun(Box::new(c), tab_count + tab, tab);
+        }
+      }
+    }
+
+    if let Some(ln) = self.nstack.last() {
+      if ln.et == ExpressionType::Object {
+        if ln.is_object_expression() {
+          println!("ObjectExpression");
+          let root = ln.root.as_ref().to_ref().downcast_ref::<ObjectExpression>().unwrap();
+          root.lit_objects.iter().for_each(|lo| {
+            fun(Box::new(lo), _tab, _tab);
+          });
+        }
+      }
+    }
   }
 }
 

@@ -8,14 +8,14 @@ ObjectExpression
   ;
 
 ObjectLiteral: 
-  : ObjectKey ':' ObjectValue ','?
+  : KeyLiteral ':' ValueLiteral ','?
   ;
 
-ObjectKey 
+KeyLiteral
   : StringLiteral 
   ;
 
-ObjectValue
+ValueLiteral
   : ObjectExpression
   : ArrayExpression
   : StringLiteral 
@@ -42,5 +42,5 @@ Null
   ;
 
 ArrayExpression
-  : '[' (ObjectExpression | ArrayExpression | StringLiteral | Boolean | Numeric | Null) ','? * ']'
+  : '[' (ValueLiteral','?)* ']'
   ;
