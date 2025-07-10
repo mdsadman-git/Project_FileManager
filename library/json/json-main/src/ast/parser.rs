@@ -545,11 +545,6 @@ impl <'a> JsonParser<'a> {
               v if BooleanLiteral::is_bool(v) => lx.inject(ValueLiteral::new(Box::new(BooleanLiteral::new(v.parse::<bool>().unwrap())))),
               v if NullLiteral::is_null(v) => lx.inject(ValueLiteral::new(Box::new(NullLiteral::new()))),
               _  => {
-                let tv: Vec<&str> = token.value.matches(char::is_numeric).collect();
-                if tv.len() != token.value.len() {
-                  panic!("Parsing Exception: Unknown value found! {}", token.value);
-                }
-
                 if let Ok(p) = token.value.parse::<u8>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else
@@ -805,10 +800,14 @@ mod tests {
       }
     "#);
     let mut lexer = Lexer::new(json.as_str());
-    let v = lexer.tokenize();
+    let tokens = lexer.tokenize();
     Logger::info("Tokenized List");
-    for e in v {
+    for e in tokens {
       println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
     }
+
+    let mut json_parser = JsonParser::new(tokens);
+    json_parser.parse();
+    json_parser.print();
   }
 }
