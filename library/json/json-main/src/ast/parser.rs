@@ -1,4 +1,3 @@
-use core::str;
 use std::{any::{Any, TypeId}, fmt::Debug, ops::AddAssign};
 
 use logger_main::Logger;
@@ -341,7 +340,7 @@ enum ExpressionType {
 }
 
 #[derive(Debug)]
-struct Node {
+pub struct Node {
   et: ExpressionType,
   root: Box<dyn Expression>,
 }
@@ -353,11 +352,11 @@ impl Node {
 }
 
 impl Node {
-  fn is_object_expression(&self) -> bool {
+  pub fn is_object_expression(&self) -> bool {
     self.et == ExpressionType::Object
   }
 
-  fn is_array_expression(&self) -> bool {
+  pub fn is_array_expression(&self) -> bool {
     self.et == ExpressionType::Array
   }
 }
@@ -370,7 +369,7 @@ pub struct JsonParser<'a> {
   lstack: Vec<Option<Box<dyn Expression>>>,
 }
 
-impl <'a> JsonParser<'a> {
+impl JsonParser<'_> {
   fn advance(&mut self) {
     self.index.add_assign(1);
   }
@@ -441,6 +440,12 @@ impl <'a> JsonParser<'a> {
       }
       _ => panic!("Parser Exception: Invalid Json! Json is not an object or an array type!")
     }}
+  }
+}
+
+impl <'a> JsonParser<'a> {
+  pub fn node(&self) -> Option<&Node> {
+    self.nstack.last()
   }
 
   pub fn parse(&mut self) {
@@ -575,7 +580,7 @@ impl <'a> JsonParser<'a> {
   }
 }
 
-impl <'a> JsonParser<'a> {
+impl JsonParser<'_> {
   fn print(&self) {
     Logger::console("-- Json Parser Tree --");
     fn fun(ol: Box<&dyn Expression>, space_count: usize, space_size: usize) {
@@ -866,5 +871,10 @@ mod tests {
     let mut json_parser = JsonParser::new(tokens);
     json_parser.parse();
     json_parser.print();
+
+    // let node = json_parser.node();
+    // if let Some(n) = node {
+    //   println!("-- RESULT: {:?}", n);
+    // }
   }
 }
