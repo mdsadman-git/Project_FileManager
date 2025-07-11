@@ -38,6 +38,10 @@ macro_rules! expression_impl {
         format!("{:?}", self) 
       }
 
+      fn ident_name(&self) -> String { 
+        format!("{}", stringify!($identifier))
+      }
+
       fn to_ref(&self) -> &dyn Any {
         self
       }
@@ -68,6 +72,10 @@ macro_rules! expression_gn_impl {
     impl <T: Clone + Debug + 'static> Expression for $identifier<T> {
       fn debug_str(&self) -> String {
         format!("{:?}", self) 
+      }
+
+      fn ident_name(&self) -> String { 
+        format!("{}", stringify!($identifier))
       }
 
       fn to_ref(&self) -> &dyn Any {
@@ -119,6 +127,7 @@ expression_impl!(ValueLiteral);
 
 trait Expression {
   fn debug_str(&self) -> String;
+  fn ident_name(&self) -> String;
   fn to_ref(&self) -> &dyn Any;
   fn to_mut(&mut self) -> &mut dyn Any;
   fn ex_clone(&self) -> Box<dyn Expression>;
@@ -567,115 +576,143 @@ impl <'a> JsonParser<'a> {
 impl <'a> JsonParser<'a> {
   fn print(&self) {
     println!("-- Json Parser Tree --");
-    let _tab: usize = 3;
-
-    println!("OLD");
-    println!("{:?}", self.nstack.last());
-
-    println!("NEW");
-    fn fun(ol: Box<&dyn Expression>, tab_count: usize, tab: usize) { 
+    fn fun(ol: Box<&dyn Expression>, space_count: usize, space_size: usize) {
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ObjectExpression>() {
+        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        v.lit_objects.iter().for_each(|lo| {
+          fun(Box::new(lo), space_count + space_size, space_size);
+        });
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ArrayExpression>() {
+        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        v.lit_elements.iter().for_each(|le| {
+          fun(Box::new(le), space_count + space_size, space_size);
+        });
+      } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ObjectLiteral>() {
-        println!("{} ObjectLiteral", " ".repeat(tab_count));
-        fun(Box::new(v.key.as_ref().unwrap()), tab_count + tab, tab);
-        fun(Box::new(v.value.as_ref().unwrap()), tab_count + tab, tab);
+        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        fun(Box::new(v.key.as_ref().unwrap()), space_count + space_size, space_size);
+        fun(Box::new(v.value.as_ref().unwrap()), space_count + space_size, space_size);
+      } else 
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ArrayLiteral>() {
+        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        fun(Box::new(v.value.as_ref().unwrap()), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<KeyLiteral>() {
-        println!("{} KeyLiteral", " ".repeat(tab_count));
-        fun(Box::new(&v.lit_string), tab_count + tab, tab);
+        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        fun(Box::new(&v.lit_string), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<StringLiteral>() {
-        println!("{} StringLiteral: '{}'", " ".repeat(tab_count), v.value);
+        println!("{} {}: '{}'", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
-      if let Some(_) = ol.as_ref().to_ref().downcast_ref::<NullLiteral>() {
-        println!("{} NullLiteral", " ".repeat(tab_count));
+      if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NullLiteral>() {
+        println!("{} {}", " ".repeat(space_count), v.ident_name());
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<BooleanLiteral>() {
-        println!("{} BoolLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u8>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u16>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u32>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i8>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i16>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i32>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<f32>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        println!("{} NumericLiteral: {}", " ".repeat(tab_count), v.value);
+        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ValueLiteral>() {
-        println!("{} ValueLiteral", " ".repeat(tab_count));
+        println!("{} {}", " ".repeat(space_count), v.ident_name());
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<StringLiteral>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NullLiteral>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<BooleanLiteral>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u8>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u16>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u32>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i8>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i16>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i32>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<f32>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-          fun(Box::new(c), tab_count + tab, tab);
+          fun(Box::new(c), space_count + space_size, space_size);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<ObjectLiteral>() {
+          fun(Box::new(c), space_count + space_size, space_size);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<ArrayLiteral>() {
+          fun(Box::new(c), space_count + space_size, space_size);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<ObjectExpression>() {
+          fun(Box::new(c), space_count + space_size, space_size);
+        } else 
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<ArrayExpression>() {
+          fun(Box::new(c), space_count + space_size, space_size);
         }
       }
     }
 
     if let Some(ln) = self.nstack.last() {
-      if ln.et == ExpressionType::Object {
-        if ln.is_object_expression() {
-          println!("ObjectExpression");
-          let root = ln.root.as_ref().to_ref().downcast_ref::<ObjectExpression>().unwrap();
-          root.lit_objects.iter().for_each(|lo| {
-            fun(Box::new(lo), _tab, _tab);
-          });
-        }
-      }
+      let _space_size: usize = 3;
+
+      if ln.is_object_expression() {
+        let root = ln.root.as_ref().to_ref().downcast_ref::<ObjectExpression>().unwrap();
+        println!("{}", root.ident_name());
+        root.lit_objects.iter().for_each(|lo| {
+          fun(Box::new(lo), _space_size, _space_size);
+        });
+      } else if ln.is_array_expression() {
+        let root = ln.root.as_ref().to_ref().downcast_ref::<ArrayExpression>().unwrap();
+        println!("{}", root.ident_name());
+        root.lit_elements.iter().for_each(|le| {
+          fun(Box::new(le), _space_size, _space_size);
+        });
+      } 
     }
   }
 }
