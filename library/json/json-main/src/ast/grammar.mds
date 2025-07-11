@@ -8,7 +8,7 @@ ObjectExpression
   ;
 
 ObjectLiteral: 
-  : KeyLiteral ':' ValueLiteral ','?
+  : ( KeyLiteral ':' ValueLiteral ',' ) +
   ;
 
 KeyLiteral
@@ -28,16 +28,16 @@ StringLiteral
   : '"' [.*]* '"'
   ;
 
-Numeric
+NumericLiteral
   : [0-9\.]+
   ;
 
-Boolean
+BooleanLiteral
   : true
   : false
   ;
 
-Null
+NullLiteral
   : null
   ;
 
