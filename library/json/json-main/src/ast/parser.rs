@@ -1,6 +1,8 @@
 use core::str;
 use std::{any::{Any, TypeId}, fmt::Debug, ops::AddAssign};
 
+use logger_main::Logger;
+
 use super::lexer::{Token, TokenType, ValueOf};
 
 // LOCAL CUSTOM TYPES
@@ -575,74 +577,74 @@ impl <'a> JsonParser<'a> {
 
 impl <'a> JsonParser<'a> {
   fn print(&self) {
-    println!("-- Json Parser Tree --");
+    Logger::console("-- Json Parser Tree --");
     fn fun(ol: Box<&dyn Expression>, space_count: usize, space_size: usize) {
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ObjectExpression>() {
-        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
         v.lit_objects.iter().for_each(|lo| {
           fun(Box::new(lo), space_count + space_size, space_size);
         });
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ArrayExpression>() {
-        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
         v.lit_elements.iter().for_each(|le| {
           fun(Box::new(le), space_count + space_size, space_size);
         });
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ObjectLiteral>() {
-        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
         fun(Box::new(v.key.as_ref().unwrap()), space_count + space_size, space_size);
         fun(Box::new(v.value.as_ref().unwrap()), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ArrayLiteral>() {
-        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
         fun(Box::new(v.value.as_ref().unwrap()), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<KeyLiteral>() {
-        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
         fun(Box::new(&v.lit_string), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<StringLiteral>() {
-        println!("{} {}: '{}'", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: '{}'", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NullLiteral>() {
-        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<BooleanLiteral>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u8>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u16>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u32>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i8>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i16>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i32>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<f32>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        println!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value);
+        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ValueLiteral>() {
-        println!("{} {}", " ".repeat(space_count), v.ident_name());
+        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<StringLiteral>() {
           fun(Box::new(c), space_count + space_size, space_size);
         } else 
@@ -698,21 +700,10 @@ impl <'a> JsonParser<'a> {
     }
 
     if let Some(ln) = self.nstack.last() {
+      let _root = ln.root.as_ref();
       let _space_size: usize = 3;
-
-      if ln.is_object_expression() {
-        let root = ln.root.as_ref().to_ref().downcast_ref::<ObjectExpression>().unwrap();
-        println!("{}", root.ident_name());
-        root.lit_objects.iter().for_each(|lo| {
-          fun(Box::new(lo), _space_size, _space_size);
-        });
-      } else if ln.is_array_expression() {
-        let root = ln.root.as_ref().to_ref().downcast_ref::<ArrayExpression>().unwrap();
-        println!("{}", root.ident_name());
-        root.lit_elements.iter().for_each(|le| {
-          fun(Box::new(le), _space_size, _space_size);
-        });
-      } 
+      Logger::console(format!("{}", _root.ident_name()));
+      fun(Box::new(_root), _space_size, _space_size);
     }
   }
 }
@@ -867,7 +858,7 @@ mod tests {
     "#);
     let mut lexer = Lexer::new(json.as_str());
     let tokens = lexer.tokenize();
-    Logger::info("Tokenized List");
+    Logger::info("-- Tokenized List --");
     for e in tokens {
       println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
     }

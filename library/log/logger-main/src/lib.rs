@@ -12,6 +12,10 @@ mod config;
 
 #[allow(dead_code)]
 impl Logger {
+  pub fn console(content: impl Into<String>) {
+    println!("{}", content.into());
+  } 
+
   pub fn info(content: impl Into<String>) {
     println!("{} {} '{}'", Logger::current_formatted_dt(), "INFO ", content.into());
   } 
