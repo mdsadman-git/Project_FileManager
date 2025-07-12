@@ -797,6 +797,14 @@ mod tests {
           "x1": "string"
         },
         "key1": 999,
+        "key0": [
+          1, 
+          {
+            "obj0": 1
+          },
+          true,
+          null
+        ]
       }
     "#);
 

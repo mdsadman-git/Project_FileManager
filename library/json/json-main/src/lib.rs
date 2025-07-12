@@ -6,10 +6,48 @@ pub struct Json;
 
 mod ast;
 
+// LOCAL MACROS 
+macro_rules! ty_into_jv { // Type Into JsonValue
+  ($_type:ty, $dt:path) => {
+    impl Into<JsonValue> for $_type {
+      fn into(self) -> JsonValue {
+        JsonValue { dt: $dt, value: format!("{}", self) }
+      }
+    }
+  };
+}
+
+macro_rules! rjv_into_ty {
+  ($_type:ty) => {
+    impl Into<$_type> for &JsonValue {
+      fn into(self) -> $_type {
+        if self.dt != JsonType::Number { panic!("Json Type must be number! Found: {}", self.dt); }
+        self.value.parse::<$_type>().expect(format!("Failed to parse value. Value: {}", self.value).as_str())
+      }
+    }
+
+    impl Into<Option<$_type>> for &JsonValue {
+      fn into(self) -> Option<$_type> {
+        match self.dt {
+          JsonType::Number =>  
+            return Option::Some(self.value.parse::<$_type>().expect(format!("Failed to parse value. Value: {}", self.value).as_str())),
+          JsonType::Null => 
+            return Option::None,
+          _ => {}
+        }
+      
+        panic!("Json Type must be number! Found: {}", self.dt); 
+      }
+    }
+  };
+}
+// LOCAL MACROS 
+
 #[allow(dead_code)]
 pub trait JsonBuilder {
   fn object() -> JsonObject;
   fn array() -> JsonArray;
+  // fn container(); // TODO: THIS THE THIRD OPTION | A OBJECT BASED LINKED LIST
   fn build(json_container: impl Into<JsonContainer>) -> String {
     (json_container.into() as JsonContainer).result
   }
@@ -74,11 +112,18 @@ impl JsonType {
   }
 }
 
+#[derive(Debug)]
 pub struct JsonNull;
 
 impl JsonNull {
   pub fn new() -> Self { 
     Self {} 
+  }
+}
+
+impl Display for JsonNull {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_str("null")
   }
 }
 
@@ -208,19 +253,11 @@ impl Into<JsonValue> for JsonObject {
   }
 }
 
-// NULL
-impl Into<JsonValue> for JsonNull {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Null, value: format!("null") }
-  }
-}
+// NullType
+ty_into_jv!(JsonNull, JsonType::Null);
 
-// BOOLEAN 
-impl Into<JsonValue> for bool {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Boolean, value: format!("{}", self) }
-  }
-}
+// BoolType Into JsonValue
+ty_into_jv!(bool, JsonType::Boolean);
 
 impl Into<bool> for &JsonValue {
   fn into(self) -> bool {
@@ -243,18 +280,9 @@ impl Into<Option<bool>> for &JsonValue {
   }
 }
 
-// STRING 
-impl Into<JsonValue> for &str {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::String, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for String {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::String, value: format!("{}", self) }
-  }
-}
+// StringType Into JsonValue 
+ty_into_jv!(&str, JsonType::String);
+ty_into_jv!(String, JsonType::String);
 
 impl Into<String> for &JsonValue {
   fn into(self) -> String {
@@ -277,98 +305,30 @@ impl Into<Option<String>> for &JsonValue {
   }
 }
 
-// NUMBER - F
-impl Into<JsonValue> for f64 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
+// NumericType Into JsonValue
+ty_into_jv!(f64, JsonType::Number);
+ty_into_jv!(f32, JsonType::Number);
+ty_into_jv!(i128, JsonType::Number);
+ty_into_jv!(i64, JsonType::Number);
+ty_into_jv!(i32, JsonType::Number);
+ty_into_jv!(i16, JsonType::Number);
+ty_into_jv!(i8, JsonType::Number);
+ty_into_jv!(u128, JsonType::Number);
+ty_into_jv!(u64, JsonType::Number);
+ty_into_jv!(u32, JsonType::Number);
+ty_into_jv!(u16, JsonType::Number);
+ty_into_jv!(u8, JsonType::Number);
 
-impl Into<JsonValue> for f32 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-// NUMBER - I
-impl Into<JsonValue> for i128 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for i64 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for i32 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<i32> for &JsonValue {
-  fn into(self) -> i32 {
-    if self.dt != JsonType::Number { panic!("Json Type must be number! Found: {}", self.dt); }
-    self.value.parse::<i32>().expect(format!("Failed to parse value. Value: {}", self.value).as_str())
-  }
-}
-
-impl Into<Option<i32>> for &JsonValue {
-  fn into(self) -> Option<i32> {
-    match self.dt {
-      JsonType::Number =>  
-        return Option::Some(self.value.parse::<i32>().expect(format!("Failed to parse value. Value: {}", self.value).as_str())),
-      JsonType::Null => 
-        return Option::None,
-      _ => {}
-    }
-
-    panic!("Json Type must be number! Found: {}", self.dt); 
-  }
-}
-
-impl Into<JsonValue> for i16 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for i8 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-// NUMBER - U
-impl Into<JsonValue> for u128 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for u64 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for u32 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for u16 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
-
-impl Into<JsonValue> for u8 {
-  fn into(self) -> JsonValue {
-    JsonValue { dt: JsonType::Number, value: format!("{}", self) }
-  }
-}
+// &JsonValue Into NumericType
+rjv_into_ty!(f64);
+rjv_into_ty!(f32);
+rjv_into_ty!(i128);
+rjv_into_ty!(i64);
+rjv_into_ty!(i32);
+rjv_into_ty!(i16);
+rjv_into_ty!(i8);
+rjv_into_ty!(u128);
+rjv_into_ty!(u64);
+rjv_into_ty!(u32);
+rjv_into_ty!(u16);
+rjv_into_ty!(u8);

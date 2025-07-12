@@ -84,7 +84,7 @@ impl<'a> Lexer<'a> {
   }
 }
 
-impl<'a> Lexer<'a> {
+impl Lexer<'_> {
   pub fn tokenize(&mut self) -> &Vec<Token> {
     loop { if !self.next() { break; } }
     &self.tokens
