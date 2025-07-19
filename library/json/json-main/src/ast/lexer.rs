@@ -80,7 +80,6 @@ impl<'a> Lexer<'a> {
       object_track: Vec::new(),
       key_track: Vec::new(),
     }
-
   }
 }
 
@@ -141,7 +140,7 @@ impl Lexer<'_> {
   }
 
   fn add_content(&mut self, c: &mut char) {
-    let checkers = [',','}','{',']','[',' ','\n','\t'];
+    let checkers = [',','{','}','[',']',' ','\n','\t'];
     if checkers.contains(c) { return; }
 
     let mut content = String::from(*c);

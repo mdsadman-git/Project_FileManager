@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-  use json_main::{Json, JsonArray, JsonBuilder, JsonNull};
+  use json_main::builder::{main::JsonBuilder, types::JsonNull, array::JsonArray};
+  use json_main::Json;
+
   use logger_main::Logger;
 
   #[test]
@@ -11,16 +13,19 @@ mod tests {
     json_object.insert("key3", false);
     json_object.insert("key4", JsonNull::new());
 
-    println!("--- Generated Json ---");
     let json_value_key1_string: String = json_object.get("key1").unwrap().into();
     let json_value_key2_i32: i32 = json_object.get("key2").unwrap().into();
     let json_value_key3_bool: bool = json_object.get("key3").unwrap().into();
     let json_value_key4_null: Option<String> = json_object.get("key4").unwrap().into();
 
-    println!("STRING: {}", json_value_key1_string);
-    println!("NUMBER: {}", json_value_key2_i32);
-    println!("BOOL:   {}", json_value_key3_bool);
-    println!("NULL:   {:?}", json_value_key4_null);
+    Logger::console(format!("STRING: {}", json_value_key1_string));
+    Logger::console(format!("NUMBER: {}", json_value_key2_i32));
+    Logger::console(format!("BOOL:   {}", json_value_key3_bool));
+    Logger::console(format!("NULL:   {:?}", json_value_key4_null));
+
+    let json = Json::build(json_object);
+    println!("--- Generated Json ---");
+    println!("{}", json);
     println!("--- Generated Json ---");
   }
 

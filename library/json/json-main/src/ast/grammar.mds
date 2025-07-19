@@ -1,6 +1,6 @@
 Expression
   : ObjectExpression
-  : ArrayExpression
+  | ArrayExpression
   ;
 
 ObjectExpression
@@ -17,11 +17,11 @@ KeyLiteral
 
 ValueLiteral
   : ObjectExpression
-  : ArrayExpression
-  : StringLiteral 
-  : Numeric
-  : Boolean
-  : Null
+  | ArrayExpression
+  | StringLiteral 
+  | Numeric
+  | Boolean
+  | Null
   ;
 
 StringLiteral
@@ -34,7 +34,7 @@ NumericLiteral
 
 BooleanLiteral
   : true
-  : false
+  | false
   ;
 
 NullLiteral

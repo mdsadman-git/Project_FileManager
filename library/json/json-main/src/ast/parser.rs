@@ -281,7 +281,7 @@ impl ValueLiteral {
   }
 }
 
-trait ValueLiteralInjector {
+trait VLInjector {
   fn inject(&mut self, value: ValueLiteral);
 }
 
@@ -297,7 +297,7 @@ impl ObjectLiteral {
   }
 }
 
-impl ValueLiteralInjector for ObjectLiteral {
+impl VLInjector for ObjectLiteral {
   fn inject(&mut self, value: ValueLiteral) {
     self.value = Some(value);
   }
@@ -318,7 +318,7 @@ struct ArrayLiteral {
   value: Option<ValueLiteral>,
 }
 
-impl ValueLiteralInjector for ArrayLiteral {
+impl VLInjector for ArrayLiteral {
   fn inject(&mut self, value: ValueLiteral) {
     self.value = Some(value);
   }
@@ -409,7 +409,7 @@ impl JsonParser<'_> {
           ValueOf::Object => if let None = self.lstack.last() {
             panic!("Parser Exception: Last expression should not be none!");
           }, 
-          _ => panic!("Parser Exception: Unknown value type is given!")
+          _ => panic!("Parser Exception: Unknown value type is given!"),
         }
 
         if self.nstack.last().is_none() {
@@ -466,7 +466,7 @@ impl <'a> JsonParser<'a> {
         }
 
         let ls = self.lstack.last_mut().unwrap().as_mut().unwrap().to_mut();
-        let lx: Box<&mut dyn ValueLiteralInjector> = match ls.downcast_mut::<ObjectLiteral>() {
+        let lx: Box<&mut dyn VLInjector> = match ls.downcast_mut::<ObjectLiteral>() {
             Some(v) => Box::new(v),
             None => match ls.downcast_mut::<ArrayLiteral>() {
                 Some(v) => Box::new(v),
@@ -483,25 +483,25 @@ impl <'a> JsonParser<'a> {
               _  => {
                 if let Ok(p) = token.value.parse::<u8>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
-                } else
+                } else 
                 if let Ok(p) = token.value.parse::<u16>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
-                } else
+                } else 
                 if let Ok(p) = token.value.parse::<u32>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
-                } else
+                } else 
                 if let Ok(p) = token.value.parse::<u64>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
-                } else
+                } else 
                 if let Ok(p) = token.value.parse::<i8>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
-                } else
+                } else 
                 if let Ok(p) = token.value.parse::<i16>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
-                } else
+                } else 
                 if let Ok(p) = token.value.parse::<i32>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
-                } else
+                } else 
                 if let Ok(p) = token.value.parse::<i64>() {
                   lx.inject(ValueLiteral::new(Box::new(NumericLiteral::new(p))));
                 } else 
@@ -584,72 +584,74 @@ impl JsonParser<'_> {
   fn print(&self) {
     Logger::console("-- Json Parser Tree --");
     fn fun(ol: Box<&dyn Expression>, space_count: usize, space_size: usize) {
+      let prefix_spaces = " ".repeat(space_count);
+
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ObjectExpression>() {
-        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
+        Logger::console(format!("{}{}", prefix_spaces, v.ident_name()));
         v.lit_objects.iter().for_each(|lo| {
           fun(Box::new(lo), space_count + space_size, space_size);
         });
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ArrayExpression>() {
-        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
+        Logger::console(format!("{}{}", prefix_spaces, v.ident_name()));
         v.lit_elements.iter().for_each(|le| {
           fun(Box::new(le), space_count + space_size, space_size);
         });
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ObjectLiteral>() {
-        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
+        Logger::console(format!("{}{}", prefix_spaces, v.ident_name()));
         fun(Box::new(v.key.as_ref().unwrap()), space_count + space_size, space_size);
         fun(Box::new(v.value.as_ref().unwrap()), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ArrayLiteral>() {
-        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
+        Logger::console(format!("{}{}", prefix_spaces, v.ident_name()));
         fun(Box::new(v.value.as_ref().unwrap()), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<KeyLiteral>() {
-        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
+        Logger::console(format!("{}{}", prefix_spaces, v.ident_name()));
         fun(Box::new(&v.lit_string), space_count + space_size, space_size);
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<StringLiteral>() {
-        Logger::console(format!("{} {}: '{}'", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: '{}'", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NullLiteral>() {
-        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
+        Logger::console(format!("{}{}", prefix_spaces, v.ident_name()));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<BooleanLiteral>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u8>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u16>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u32>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i8>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i16>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<i32>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<f32>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
-        Logger::console(format!("{} {}: {}", " ".repeat(space_count), v.ident_name(), v.value));
+        Logger::console(format!("{}{}: {}", prefix_spaces, v.ident_name(), v.value));
       } else 
       if let Some(v) = ol.as_ref().to_ref().downcast_ref::<ValueLiteral>() {
-        Logger::console(format!("{} {}", " ".repeat(space_count), v.ident_name()));
+        Logger::console(format!("{}{}", prefix_spaces, v.ident_name()));
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<StringLiteral>() {
           fun(Box::new(c), space_count + space_size, space_size);
         } else 
@@ -705,10 +707,9 @@ impl JsonParser<'_> {
     }
 
     if let Some(ln) = self.nstack.last() {
-      let _root = ln.root.as_ref();
-      let _space_size: usize = 3;
-      Logger::console(format!("{}", _root.ident_name()));
-      fun(Box::new(_root), _space_size, _space_size);
+      fun(Box::new(ln.root.as_ref()), 0, 3);
+    } else {
+      println!("Nothing to display!");
     }
   }
 }
@@ -800,7 +801,7 @@ mod tests {
         "key0": [
           1, 
           {
-            "obj0": 1
+            "obj0": "LOL"
           },
           true,
           null
@@ -880,9 +881,9 @@ mod tests {
     json_parser.parse();
     json_parser.print();
 
-    // let node = json_parser.node();
-    // if let Some(n) = node {
-    //   println!("-- RESULT: {:?}", n);
-    // }
+    let node = json_parser.node();
+    if let Some(n) = node {
+      println!("-- RESULT: {:?}", n);
+    }
   }
 }
