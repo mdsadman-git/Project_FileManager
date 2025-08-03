@@ -126,7 +126,7 @@ expression_impl!(KeyLiteral);
 expression_impl!(ValueLiteral);
 // MACRO DECLARATION
 
-trait Expression {
+pub trait Expression {
   fn debug_str(&self) -> String;
   fn ident_name(&self) -> String;
   fn to_ref(&self) -> &dyn Any;
@@ -151,7 +151,7 @@ impl Debug for dyn Literal {
 }
 
 #[derive(Debug, Clone)]
-struct ObjectExpression {
+pub struct ObjectExpression {
   lit_objects: Vec<ObjectLiteral>,
 }
 
@@ -162,13 +162,13 @@ impl ObjectExpression {
 }
 
 impl ObjectExpression {
-  pub fn add(&mut self, lit_object: ObjectLiteral) {
+  fn add(&mut self, lit_object: ObjectLiteral) {
     self.lit_objects.push(lit_object);
   }
 }
 
 #[derive(Debug, Clone)]
-struct ArrayExpression {
+pub struct ArrayExpression {
   lit_elements: Vec<ArrayLiteral>,
 }
 
@@ -179,7 +179,7 @@ impl ArrayExpression {
 }
 
 impl ArrayExpression {
-  pub fn add(&mut self, lit_element: ArrayLiteral) {
+  fn add(&mut self, lit_element: ArrayLiteral) {
     self.lit_elements.push(lit_element);
   }
 }
@@ -359,9 +359,13 @@ impl Node {
   pub fn is_array_expression(&self) -> bool {
     self.et == ExpressionType::Array
   }
+
+  pub fn root(&self) -> &dyn Expression {
+    self.root.as_ref()
+  }
 }
 
-pub struct JsonParser<'a> {
+pub struct Parser<'a> {
   tokens: &'a Vec<Token>,
   token: Option<&'a Token>,
   index: usize,
@@ -369,7 +373,7 @@ pub struct JsonParser<'a> {
   lstack: Vec<Option<Box<dyn Expression>>>,
 }
 
-impl JsonParser<'_> {
+impl Parser<'_> {
   fn advance(&mut self) {
     self.index.add_assign(1);
   }
@@ -429,7 +433,7 @@ impl JsonParser<'_> {
   }
 }
 
-impl <'a> JsonParser<'a> {
+impl <'a> Parser<'a> {
   pub fn new(tokens: &'a Vec<Token>) -> Self {
     Self { tokens, index: 1, token: None, lstack: vec![None], nstack: match (tokens.get(0), tokens.get(tokens.len() - 1)) {
       (Some(start), Some(end)) if start.tt == TokenType::ObjectStart && end.tt == TokenType::ObjectEnd => {
@@ -441,11 +445,20 @@ impl <'a> JsonParser<'a> {
       _ => panic!("Parser Exception: Invalid Json! Json is not an object or an array type!")
     }}
   }
+
+  pub fn execute(tokens: &'a Vec<Token>) -> Self {
+    let mut parser = Parser::new(tokens);
+    parser.parse();
+    parser
+  }
 }
 
-impl <'a> JsonParser<'a> {
-  pub fn node(&self) -> Option<&Node> {
-    self.nstack.last()
+impl <'a> Parser<'a> {
+  pub fn node(&self) -> &Node {
+    match self.nstack.last() {
+      Some(node) => node,
+      None => panic!("Parser Exception! Node is empty!"),
+    }
   }
 
   pub fn parse(&mut self) {
@@ -580,7 +593,7 @@ impl <'a> JsonParser<'a> {
   }
 }
 
-impl JsonParser<'_> {
+impl Parser<'_> {
   fn print(&self) {
     Logger::console("-- Json Parser Tree --");
     fn fun(ol: Box<&dyn Expression>, space_count: usize, space_size: usize) {
@@ -719,7 +732,7 @@ impl JsonParser<'_> {
 mod tests {
   use crate::ast::lexer::Lexer;
   use logger_main::Logger;
-  use super::JsonParser;
+  use super::Parser;
 
   #[test]
   fn jp_array_test() {
@@ -752,7 +765,7 @@ mod tests {
       println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
     }
 
-    let mut json_parser = JsonParser::new(tokens);
+    let mut json_parser = Parser::new(tokens);
     json_parser.parse();
     json_parser.print();
   }
@@ -776,9 +789,9 @@ mod tests {
       println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
     }
 
-    let mut json_parser = JsonParser::new(tokens);
-    json_parser.parse();
-    json_parser.print();
+    let mut parser = Parser::new(tokens);
+    parser.parse();
+    parser.print();
   }
 
   #[test]
@@ -816,9 +829,9 @@ mod tests {
       println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
     }
 
-    let mut json_parser = JsonParser::new(tokens);
-    json_parser.parse();
-    json_parser.print();
+    let mut parser = Parser::new(tokens);
+    parser.parse();
+    parser.print();
   }
 
   #[test]
@@ -877,13 +890,11 @@ mod tests {
       println!("Token - {} {:<15} '{}'", e.tt, format!("{:?}", e.quoted), e.value);
     }
 
-    let mut json_parser = JsonParser::new(tokens);
-    json_parser.parse();
-    json_parser.print();
+    let mut parser = Parser::new(tokens);
+    parser.parse();
+    parser.print();
 
-    let node = json_parser.node();
-    if let Some(n) = node {
-      println!("-- RESULT: {:?}", n);
-    }
+    let node = parser.node();
+    println!("-- RESULT: {:?}", node);
   }
 }

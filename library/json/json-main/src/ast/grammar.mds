@@ -3,6 +3,10 @@ Expression
   | ArrayExpression
   ;
 
+ArrayExpression
+  : '[' (ValueLiteral','?)* ']'
+  ;
+
 ObjectExpression
   : '{' (ObjectLiteral) * '}'
   ;
@@ -39,8 +43,4 @@ BooleanLiteral
 
 NullLiteral
   : null
-  ;
-
-ArrayExpression
-  : '[' (ValueLiteral','?)* ']'
   ;
