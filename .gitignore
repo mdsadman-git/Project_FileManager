@@ -10,6 +10,18 @@
 /library/json/json-macro/target
 /library/json/json-macro/Cargo.lock
 
+# LIBRARY - LOGGER
+/library/log/logger-main/target
+/library/log/logger-main/Cargo.lock
+
+# LIBRARY - ALDS LIB 
+/library/alds_lib/target
+/library/alds_lib/Cargo.lock
+
+# LIBRARY - ALDS LIB 
+/library/alds_lib/target
+/library/alds_lib/Cargo.lock
+
 # TOOLS - JSON FORMATTER
 /tools/json_formatter/pkg
 /tools/json_formatter/target
@@ -18,4 +30,3 @@
 /tools/json_formatter/static/pkg
 /tools/json_formatter/static/node_modules
 /tools/json_formatter/static/package-lock.json
-

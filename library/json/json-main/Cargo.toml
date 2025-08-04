@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-logger-main               = { path = "../../log/logger-main"}
+logger-main                   = { path = "../../log/logger-main" }
+alds_lib                      = { path = "../../alds_lib" }

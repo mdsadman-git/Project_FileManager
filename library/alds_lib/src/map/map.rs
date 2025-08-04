@@ -1,3 +1,5 @@
 struct Map {
 
 }
+
+// TODO: TRY TO USE AVL TREE FOR THIS MAP 
