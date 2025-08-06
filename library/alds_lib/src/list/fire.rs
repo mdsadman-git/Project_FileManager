@@ -30,6 +30,14 @@ impl <T: Debug> FireNode<T> {
   pub fn get_mut(&mut self) -> &mut T {
     &mut self.value
   }
+
+  pub fn next(&self) -> &Indicator<T> {
+    &self.next
+  }
+
+  pub fn prev(&self) -> &Indicator<T> {
+    &self.prev
+  }
 }
 
 impl <T: Debug> FireNode<T> {
