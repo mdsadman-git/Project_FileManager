@@ -1,8 +1,8 @@
-use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use std::{cell::{Ref, RefCell}, fmt::Debug, ops::DerefMut, rc::Rc};
 
 use logger_main::Logger;
 
-type Indicator<T> = Option<Rc<RefCell<Box<FireNode<T>>>>>;
+type Indicator<T> = Option<Rc<RefCell<FireNode<T>>>>;
 
 pub struct FireList<T> where T: Debug {
   size: usize,
@@ -10,7 +10,7 @@ pub struct FireList<T> where T: Debug {
   tail: Indicator<T>,
 }
 
-struct FireNode<T> where T: Debug {
+pub struct FireNode<T> where T: Debug {
   value: T,
   prev: Indicator<T>,
   next: Indicator<T>,
@@ -19,6 +19,16 @@ struct FireNode<T> where T: Debug {
 impl <T: Debug> FireNode<T> {
   fn new(value: T) -> Self {
     Self { value, next: None, prev: None }
+  }
+}
+
+impl <T: Debug> FireNode<T> {
+  pub fn get(&self) -> &T {
+    &self.value
+  }
+
+  pub fn get_mut(&mut self) -> &mut T {
+    &mut self.value
   }
 }
 
@@ -39,14 +49,23 @@ impl <T: Debug> FireList<T> {
 }
 
 impl <T: Debug> FireList<T> {
+
   pub fn size(&self) -> usize {
     self.size
   }
 
-  // TODO: NEED TO ADD AND ITERATOR 
+  // TODO: RETHINK ABOUT THE GET DATA RETURN TYPE
+  pub fn get<'a>(&mut self, index: usize) -> Indicator<T> {
+    let current = &mut self.head.as_ref();
+    let current = self.item_finder(current, 0, index);
+    if current.is_none() { return None; }
+    current
+  }
+
+  // TODO: CREATE THE ITERATOR AND ENUMERATOR FOR FIRE LIST
 
   pub fn link(&mut self, value: T) -> &mut Self {
-    let node = RefCell::new(Box::new(FireNode::new(value)));
+    let node = RefCell::new(FireNode::new(value));
     if self.size == 0 {
       self.head = Some(Rc::new(node));
       self.tail = self.head.clone();
@@ -60,7 +79,6 @@ impl <T: Debug> FireList<T> {
     self.size += 1;
     self
   }
-
 
   pub fn unlink(&mut self, index: usize) -> &Self {
     if index > self.size { panic!("Unlinking Exception! Index not found inside FireList [Index: {}, Size: {}]", index, self.size) }
@@ -90,7 +108,7 @@ impl <T: Debug> FireList<T> {
       }
       _ => {
         let current = &mut self.head.as_ref();
-        let current = self.finder(current, 0, index);
+        let current = self.item_finder(current, 0, index);
         if let Some(curr) = current {
           let prev = curr.borrow_mut().prev.take().unwrap();
           let next = curr.borrow_mut().next.take().unwrap();
@@ -127,12 +145,12 @@ impl <T: Debug> FireList<T> {
 }
 
 impl <T: Debug> FireList<T> {
-  fn finder(&self, current: &mut Option<&Rc<RefCell<Box<FireNode<T>>>>>, counter: usize, index: usize) -> Option<Rc<RefCell<Box<FireNode<T>>>>> {
+  fn item_finder(&self, current: &mut Option<&Rc<RefCell<FireNode<T>>>>, counter: usize, index: usize) -> Option<Rc<RefCell<FireNode<T>>>> {
     if counter == self.size || current.is_none() { return None; }
     if counter == index { return Some(current.take().unwrap().clone()); }
     let binding = current.unwrap().as_ref().borrow();
     let next = &mut binding.next.as_ref();
-    return self.finder(next, counter + 1, index);
+    return self.item_finder(next, counter + 1, index);
   }
 }
 
@@ -140,7 +158,7 @@ impl <T: Debug> FireList<T> {
 mod tests {
   use logger_main::Logger;
 
-use crate::list::fire::FireList;
+  use crate::list::fire::FireList;
 
   #[test]
   fn link_unlink_test() {
@@ -159,6 +177,13 @@ use crate::list::fire::FireList;
 
   #[test]
   fn looping_test() {
+    let mut fl = FireList::<String>::new();
 
+    Logger::console("Linking Test!");
+    for i in 0..10 { fl.link(format!("{}", i)); }
+    fl.print();
+
+    let f = fl.get(2);
+    println!("{:?}", f.unwrap().borrow().get());
   }
 }
