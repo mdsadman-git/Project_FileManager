@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum JsonType { Number, String, Boolean, Null, Object, Array }
 
 impl JsonType {
@@ -17,16 +17,16 @@ impl std::fmt::Display for JsonType {
 // Custom Types - Null
 
 #[derive(Debug)]
-pub struct JsonNull;
+pub struct JsonBuilderNull;
 
-impl JsonNull {
+impl JsonBuilderNull {
   pub fn new() -> Self { 
     Self {} 
   }
 }
 
 // Display Trait
-impl std::fmt::Display for JsonNull {
+impl std::fmt::Display for JsonBuilderNull {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.write_str("null")
   }

@@ -1,18 +1,18 @@
-use crate::builder::value::JsonValue;
+use crate::builder::value::JsonBuilderValue;
 
-#[derive(Debug)]
-pub struct JsonArray {
-  pub array: Vec<JsonValue>,
+#[derive(Debug, Clone)]
+pub struct JsonBuilderArray {
+  pub array: Vec<JsonBuilderValue>,
 }
 
-impl JsonArray {
+impl JsonBuilderArray {
   pub fn new() -> Self {
     Self { array: Vec::new() }
   }
 }
 
-impl JsonArray {
-  pub fn append(&mut self, o: impl Into<JsonValue>) -> &mut Self {
+impl JsonBuilderArray {
+  pub fn append(&mut self, o: impl Into<JsonBuilderValue>) -> &mut Self {
     self.array.push(o.into());
     self
   }

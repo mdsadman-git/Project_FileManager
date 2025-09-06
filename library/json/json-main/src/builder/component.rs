@@ -1,15 +1,14 @@
-use crate::builder::object::JsonObject;
-use crate::builder::array::JsonArray;
+use crate::builder::object::JsonBuilderObject;
+use crate::builder::array::JsonBuilderArray;
 use crate::builder::types::JsonType;
-use crate::builder::value::JsonValue;
+use crate::builder::value::JsonBuilderValue;
 
-pub struct JsonComponent {
-  pub(in crate::builder) result: String,
+pub struct JsonBuilderComponent {
+  pub(in crate) result: String,
 }
 
-// Into Trait
-impl Into<JsonComponent> for JsonObject {
-  fn into(self) -> JsonComponent {
+impl Into<JsonBuilderComponent> for JsonBuilderObject {
+  fn into(self) -> JsonBuilderComponent {
     let mut result = Vec::new(); 
     for e in self.object.iter() {
       match e.1.dt {
@@ -18,13 +17,13 @@ impl Into<JsonComponent> for JsonObject {
       }
     }
 
-    JsonComponent { result: format!("{{{}}}", result.join(",")) }
+    JsonBuilderComponent { result: format!("{{{}}}", result.join(",")) }
   }
 }
 
-impl Into<JsonComponent> for JsonArray {
-  fn into(self) -> JsonComponent {
-    let v: JsonValue = self.into();
-    JsonComponent { result: v.value }
+impl Into<JsonBuilderComponent> for JsonBuilderArray {
+  fn into(self) -> JsonBuilderComponent {
+    let v: JsonBuilderValue = self.into();
+    JsonBuilderComponent { result: v.value }
   }
 }

@@ -2,7 +2,7 @@ use std::{any::{Any, TypeId}, fmt::Debug, ops::AddAssign};
 
 use logger_main::Logger;
 
-use super::lexer::{Token, TokenType, ValueOf};
+use super::laxer::{Token, TokenType, ValueOf};
 
 // LOCAL CUSTOM TYPES
 trait FnVec {
@@ -134,8 +134,12 @@ pub trait Expression {
   fn ex_clone(&self) -> Box<dyn Expression>;
 }
 
-trait Literal : Expression {
+pub trait Literal : Expression {
   fn lit_clone(&self) -> Box<dyn Literal>;
+}
+
+pub trait LiteralValueTrait<T> {
+  fn get(&mut self) -> T;
 }
 
 impl Debug for dyn Expression {
@@ -152,7 +156,7 @@ impl Debug for dyn Literal {
 
 #[derive(Debug, Clone)]
 pub struct ObjectExpression {
-  lit_objects: Vec<ObjectLiteral>,
+  pub lit_objects: Vec<ObjectLiteral>,
 }
 
 impl ObjectExpression {
@@ -169,7 +173,7 @@ impl ObjectExpression {
 
 #[derive(Debug, Clone)]
 pub struct ArrayExpression {
-  lit_elements: Vec<ArrayLiteral>,
+  pub lit_elements: Vec<ArrayLiteral>,
 }
 
 impl ArrayExpression {
@@ -185,7 +189,7 @@ impl ArrayExpression {
 }
 
 #[derive(Debug, Clone)]
-struct StringLiteral {
+pub struct StringLiteral {
   value: String,
 }
 
@@ -195,8 +199,15 @@ impl StringLiteral {
   }
 }
 
+impl LiteralValueTrait<String> for StringLiteral {
+  fn get(&mut self) -> String {
+    // TODO: FIND A BETTER WAY TO GET THE STRING
+    self.value.clone()
+  }
+}
+
 #[derive(Debug, Clone)]
-struct NumericLiteral<T: Clone + Debug + 'static> {
+pub struct NumericLiteral<T: Clone + Debug + 'static> {
   value: T,
 }
 
@@ -223,8 +234,22 @@ impl <T: Clone + Debug + 'static> NumericLiteral<T> {
   }
 }
 
+macro_rules! numeric_lit_value_trait {
+  ($($dt:ty),*) => {
+    $(
+      impl LiteralValueTrait<$dt> for NumericLiteral<$dt> {
+        fn get(&mut self) -> $dt {
+          self.value
+        }
+      }
+    )*
+  };
+}
+
+numeric_lit_value_trait!(u8, u16, u32, u64, i8, i16, i32, i64, f32, f64);
+
 #[derive(Debug, Clone)]
-struct BooleanLiteral {
+pub struct BooleanLiteral {
   value: bool,
 }
 
@@ -239,8 +264,14 @@ impl BooleanLiteral {
   }
 }
 
+impl LiteralValueTrait<bool> for BooleanLiteral {
+  fn get(&mut self) -> bool {
+    self.value
+  }
+}
+
 #[derive(Debug, Clone)]
-struct NullLiteral;
+pub struct NullLiteral;
 
 impl NullLiteral {
   pub fn new() -> Self {
@@ -254,8 +285,8 @@ impl NullLiteral {
 }
 
 #[derive(Debug, Clone)]
-struct KeyLiteral {
-  lit_string: StringLiteral,
+pub struct KeyLiteral {
+  pub lit_string: StringLiteral,
 }
 
 impl KeyLiteral {
@@ -265,8 +296,8 @@ impl KeyLiteral {
 }
 
 #[derive(Debug)]
-struct ValueLiteral {
-  literal: Box<dyn Literal>
+pub struct ValueLiteral {
+  pub literal: Box<dyn Literal>
 }
 
 impl Clone for ValueLiteral {
@@ -286,9 +317,9 @@ trait VLInjector {
 }
 
 #[derive(Debug, Clone)]
-struct ObjectLiteral {
-  key: Option<KeyLiteral>,
-  value: Option<ValueLiteral>,
+pub struct ObjectLiteral {
+  pub key: Option<KeyLiteral>,
+  pub value: Option<ValueLiteral>,
 }
 
 impl ObjectLiteral {
@@ -314,8 +345,8 @@ impl ObjectLiteral {
 }
 
 #[derive(Debug, Clone)]
-struct ArrayLiteral {
-  value: Option<ValueLiteral>,
+pub struct ArrayLiteral {
+  pub value: Option<ValueLiteral>,
 }
 
 impl VLInjector for ArrayLiteral {
@@ -360,8 +391,8 @@ impl Node {
     self.et == ExpressionType::Array
   }
 
-  pub fn root(&self) -> &dyn Expression {
-    self.root.as_ref()
+  pub fn root(&mut self) -> &mut dyn Expression {
+    self.root.as_mut()
   }
 }
 
@@ -454,8 +485,8 @@ impl <'a> Parser<'a> {
 }
 
 impl <'a> Parser<'a> {
-  pub fn node(&self) -> &Node {
-    match self.nstack.last() {
+  pub fn node(&mut self) -> &mut Node {
+    match self.nstack.last_mut() {
       Some(node) => node,
       None => panic!("Parser Exception! Node is empty!"),
     }
@@ -594,6 +625,7 @@ impl <'a> Parser<'a> {
 }
 
 impl Parser<'_> {
+  // TODO: CHANGE IT TO TRAVERSER
   fn print(&self) {
     Logger::console("-- Json Parser Tree --");
     fn fun(ol: Box<&dyn Expression>, space_count: usize, space_size: usize) {
@@ -695,13 +727,13 @@ impl Parser<'_> {
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i32>>() {
           fun(Box::new(c), space_count + space_size, space_size);
         } else 
-        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<i64>>() {
           fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<f32>>() {
           fun(Box::new(c), space_count + space_size, space_size);
         } else 
-        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<u64>>() {
+        if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<NumericLiteral<f64>>() {
           fun(Box::new(c), space_count + space_size, space_size);
         } else 
         if let Some(c) = v.literal.as_ref().to_ref().downcast_ref::<ObjectLiteral>() {
@@ -730,7 +762,7 @@ impl Parser<'_> {
 // TESTS
 #[cfg(test)]
 mod tests {
-  use crate::ast::lexer::Lexer;
+  use crate::ast::laxer::Laxer;
   use logger_main::Logger;
   use super::Parser;
 
@@ -757,7 +789,7 @@ mod tests {
       ]
     "#);
 
-    let mut lexer = Lexer::new(json.as_str());
+    let mut lexer = Laxer::new(json.as_str());
     let tokens = lexer.tokenize();
 
     Logger::info("Tokenized List");
@@ -781,7 +813,7 @@ mod tests {
       }
     "#);
 
-    let mut lexer = Lexer::new(json.as_str());
+    let mut lexer = Laxer::new(json.as_str());
     let tokens = lexer.tokenize();
 
     Logger::info("Tokenized List");
@@ -822,7 +854,7 @@ mod tests {
       }
     "#);
 
-    let mut lexer = Lexer::new(json.as_str());
+    let mut lexer = Laxer::new(json.as_str());
     let tokens = lexer.tokenize();
     Logger::info("Tokenized List");
     for e in tokens {
@@ -883,7 +915,7 @@ mod tests {
         "key2": 123
       }
     "#);
-    let mut lexer = Lexer::new(json.as_str());
+    let mut lexer = Laxer::new(json.as_str());
     let tokens = lexer.tokenize();
     Logger::info("-- Tokenized List --");
     for e in tokens {

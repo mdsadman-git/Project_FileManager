@@ -8,11 +8,11 @@ ArrayExpression
   ;
 
 ObjectExpression
-  : '{' (ObjectLiteral) * '}'
+  : '{' (ObjectLiteral)* '}'
   ;
 
 ObjectLiteral: 
-  : ( KeyLiteral ':' ValueLiteral ',' ) +
+  : ( KeyLiteral ':' ValueLiteral ',' )+
   ;
 
 KeyLiteral

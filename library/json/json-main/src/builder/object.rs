@@ -1,23 +1,21 @@
 use std::collections::HashMap;
 use logger_main::Logger;
 
-use crate::builder::value::JsonValue;
+use crate::builder::value::JsonBuilderValue;
 
-// TODO: CHANGE THE HASH MAP TO CUSTOM DS
-
-#[derive(Debug)]
-pub struct JsonObject {
-  pub object: HashMap<String, JsonValue>,
+#[derive(Debug, Clone)]
+pub struct JsonBuilderObject {
+  pub object: HashMap<String, JsonBuilderValue>,
 }
 
-impl JsonObject {
+impl JsonBuilderObject {
   pub fn new() -> Self {
     Self { object: HashMap::new() }
   }
 }
 
-impl JsonObject {
-  pub fn insert(&mut self, k: impl Into<String>, v: impl Into<JsonValue>) -> &mut Self {
+impl JsonBuilderObject {
+  pub fn insert(&mut self, k: impl Into<String>, v: impl Into<JsonBuilderValue>) -> &mut Self {
     let (json_key , json_value) = (k.into(), v.into());
     Logger::debug(format!("Append Value | {} => {}", json_key, json_value));
     self.object.insert(json_key, json_value);
@@ -31,7 +29,11 @@ impl JsonObject {
     self
   }
 
-  pub fn get(&mut self, k: impl Into<String>) -> Option<&JsonValue> {
+  pub fn get(&mut self, k: impl Into<String>) -> Option<&JsonBuilderValue> {
     self.object.get(&k.into())
+  }
+
+  pub fn get_mut(&mut self, k: impl Into<String>) -> Option<&mut JsonBuilderValue> {
+    self.object.get_mut(&k.into())
   }
 }

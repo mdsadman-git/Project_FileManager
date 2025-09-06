@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, rc::Rc};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenType {
@@ -63,18 +63,18 @@ impl BasicToken for Token {
   }
 }
 
-pub struct Lexer<'a> {
-  iterator: Box<dyn Iterator<Item = char> + 'a>,
+pub struct Laxer {
+  json: Rc<String>,
   tokens: Vec<Token>,
   is_quoted: bool,
   object_track: Vec<bool>,
   key_track: Vec<bool>,
 }
 
-impl<'a> Lexer<'a> {
-  pub fn new(json: &'a str) -> Self {
+impl Laxer {
+  pub fn new(json: impl Into<String>) -> Self {
     Self {
-      iterator: Box::new(json.chars()), 
+      json: Rc::new(json.into()),
       tokens: Vec::new(),
       is_quoted: false, 
       object_track: Vec::new(),
@@ -83,52 +83,56 @@ impl<'a> Lexer<'a> {
   }
 }
 
-impl Lexer<'_> {
+impl Laxer {
   pub fn tokenize(&mut self) -> &Vec<Token> {
-    loop { if !self.next() { break; } }
+    let cloned = Rc::clone(&self.json);
+    let iterator = &mut cloned.chars();
+    loop { if !self.next(Box::new(iterator)) { break; } }
     &self.tokens
   }
 
-  fn next(&mut self) -> bool {
-    if let Some(mut c) = self.iterator.next() {
+  fn next<I>(&mut self, mut iterator: Box<&mut I>) -> bool where I: Iterator<Item = char> {
+    if let Some(mut c) = iterator.next() {
       'label: loop {
-        if c == ' ' || c == '\n' || c == '\t' {
-          break 'label; 
-        }
+        if c == ' ' || c == '\n' || c == '\t' { break 'label; }
 
         if self.is_quoted || (c != '"' && self.key_track.len() > 0 && !*self.key_track.last().unwrap()) {
-          self.add_content(&mut c);
+          self.make(&mut c, iterator);
         }
 
-        if c == '"' {
-          self.is_quoted = !self.is_quoted;
-        } else if c == '{' && !self.is_quoted {
+        if c == '{' && !self.is_quoted {
           self.object_track.push(true);
           self.key_track.push(true);
           self.tokens.push(BasicToken::new(TokenType::ObjectStart, ValueOf::None, c));
-        } else if c == '}' && !self.is_quoted {
+        } else 
+        if c == '}' && !self.is_quoted {
           self.object_track.pop();
           self.key_track.pop();
           self.tokens.push(BasicToken::new(TokenType::ObjectEnd, ValueOf::None, c));
-        } else if c == '[' && !self.is_quoted {
+        } else 
+        if c == '[' && !self.is_quoted {
           self.object_track.push(false);
           self.key_track.push(false);
           self.tokens.push(BasicToken::new(TokenType::ArrayStart, ValueOf::None, c));
-        } else if c == ']' && !self.is_quoted {
+        } else 
+        if c == ']' && !self.is_quoted {
           self.object_track.pop();
           self.key_track.pop();
           self.tokens.push(BasicToken::new(TokenType::ArrayEnd, ValueOf::None, c));
-        } else if c == ':' && !self.is_quoted {
+        } else 
+        if c == ':' && !self.is_quoted {
           self.key_track.pop();
           self.key_track.push(false);
           self.tokens.push(BasicToken::new(TokenType::ContentSeparator, ValueOf::None, c));
-        } else if c == ',' && !self.is_quoted {
+        } else 
+        if c == ',' && !self.is_quoted {
           self.key_track.pop();
           self.key_track.push(*self.object_track.last().unwrap());
           self.tokens.push(BasicToken::new(TokenType::ElementSeparator, ValueOf::None, c));
-        } else {
-          // TODO: BETTER TO ADD A PANIC HERE FOR UNKNOWN CHARACTER
-        }
+        } else 
+        if c == '"' {
+          self.is_quoted = !self.is_quoted;
+        } 
 
         break 'label;
       }
@@ -139,14 +143,14 @@ impl Lexer<'_> {
     false
   }
 
-  fn add_content(&mut self, c: &mut char) {
+  fn make<I>(&mut self, c: &mut char, mut iterator: Box<&mut I>) where I: Iterator<Item = char> {
     let checkers = [',','{','}','[',']',' ','\n','\t'];
     if checkers.contains(c) { return; }
 
     let mut content = String::from(*c);
     let mut is_escape = false;
     let is_quoted = self.is_quoted;
-    while let Some(q) = self.iterator.next() {
+    while let Some(q) = iterator.next() {
         if q == '"' && !is_escape {
           self.is_quoted = !self.is_quoted;
           break;
@@ -179,7 +183,7 @@ impl Lexer<'_> {
 #[cfg(test)]
 mod tests {
   use logger_main::Logger;
-  use super::Lexer;
+  use super::Laxer;
 
   #[test]
   fn json_object_parser_test() {
@@ -192,7 +196,7 @@ mod tests {
       }
     "#);
 
-    let mut lexer = Lexer::new(json.as_str());
+    let mut lexer = Laxer::new(json.as_str());
     let tokens = lexer.tokenize();
     Logger::info("Tokenized List");
     for e in tokens {
@@ -249,7 +253,7 @@ mod tests {
         "key2": 123
       }
     "#);
-    let mut lexer = Lexer::new(json.as_str());
+    let mut lexer = Laxer::new(json.as_str());
     let v = lexer.tokenize();
     Logger::info("Tokenized List");
     for e in v {

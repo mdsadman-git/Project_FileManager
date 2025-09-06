@@ -5,6 +5,7 @@ use logger_main::Logger;
 type Indicator<T> = Option<Rc<RefCell<FireNode<T>>>>;
 
 pub struct FireList<T> where T: Debug {
+  index: usize,
   size: usize,
   head: Indicator<T>,
   tail: Indicator<T>,
@@ -23,6 +24,10 @@ impl <T: Debug> FireNode<T> {
 }
 
 impl <T: Debug> FireNode<T> {
+  pub fn set_value(&mut self, value: T) {
+    self.value = value;
+  }
+
   pub fn get(&self) -> &T {
     &self.value
   }
@@ -52,25 +57,36 @@ impl <T: Debug> FireNode<T> {
 
 impl <T: Debug> FireList<T> {
   pub fn new() -> Self {
-    Self { size: 0, head: None, tail: None }
+    Self { size: 0, head: None, tail: None, index: 0 }
   }
 }
 
-impl <T: Debug> FireList<T> {
+impl <T: Debug> Iterator for FireList<T> {
+    type Item = Indicator<T>;
 
+    fn next(&mut self) -> Option<Self::Item> {
+      if self.index > self.size - 1 { 
+        self.index = 0;
+        return None; 
+      }
+
+      let current = &mut self.head.as_ref();
+      let current = self.item_finder(current, 0, self.index);
+      self.index += 1;
+      Some(current)
+    }
+}
+
+impl <T: Debug> FireList<T> {
   pub fn size(&self) -> usize {
     self.size
   }
 
-  // TODO: RETHINK ABOUT THE GET DATA RETURN TYPE
+
   pub fn get<'a>(&mut self, index: usize) -> Indicator<T> {
     let current = &mut self.head.as_ref();
-    let current = self.item_finder(current, 0, index);
-    if current.is_none() { return None; }
-    current
+    self.item_finder(current, 0, index)
   }
-
-  // TODO: CREATE THE ITERATOR AND ENUMERATOR FOR FIRE LIST
 
   pub fn link(&mut self, value: T) -> &mut Self {
     let node = RefCell::new(FireNode::new(value));
@@ -191,7 +207,19 @@ mod tests {
     for i in 0..10 { fl.link(format!("{}", i)); }
     fl.print();
 
-    let f = fl.get(2);
-    println!("{:?}", f.unwrap().borrow().get());
+    print!("WITH GET : ");
+    for i in 0..fl.size() {
+      let f = fl.get(i);
+      print!("{}, ", f.unwrap().borrow().get());
+    }
+    println!("FINISH");
+
+    print!("WITH LOOP: ");
+    for item in fl {
+      let i = item.unwrap();
+      i.borrow_mut().set_value(String::from("N"));
+      print!("{}, ", i.borrow_mut().get());
+    }
+    println!("FINISH");
   }
 }
